@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 from engine import (
     init_state,
@@ -29,9 +30,18 @@ start_scenario(st)
 summary = get_teacher_summary(st)
 progress = get_progress(st)
 current_question = get_question(st)
-current_materials = get_materials(st)
 current_node_id = st.session_state.current_node
 answer_key = f"answer_input_{current_node_id}"
+
+current_materials = get_materials(st)
+
+if "persisted_materials" not in st.session_state:
+    st.session_state.persisted_materials = {}
+
+if current_materials:
+    st.session_state.persisted_materials[current_node_id] = current_materials
+
+materials_to_show = st.session_state.persisted_materials.get(current_node_id, current_materials)
 
 
 # =========================
@@ -47,41 +57,43 @@ def format_score(value: int) -> str:
     return "не проявлен"
 
 
+def render_df_table(data, title: str):
+    if not data:
+        return
+    df = pd.DataFrame(data)
+    st.markdown(f"#### {title}")
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+
 def render_materials(materials: dict):
     if not materials:
         return
 
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
-    st.markdown('<div class="panel-title">Материалы</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="panel-subtitle">То, что Ваня показывает на текущем этапе расследования.</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown("## Материалы расследования")
+    st.caption("Все артефакты, которые доступны на текущем этапе.")
 
     for key, value in materials.items():
         if key == "messages_and_files":
             st.markdown("#### Сообщения и файлы")
             for item in value:
-                with st.expander(item.get("title", "Материал")):
+                with st.expander(item.get("title", "Материал"), expanded=False):
                     st.write(item["content"])
 
         elif key == "vanya_action_ideas":
-            st.markdown("#### Список идей Вани")
+            st.markdown("#### Идеи Вани")
             for item in value:
                 st.markdown(f"- {item}")
 
         elif key == "rule_description":
-            st.markdown("#### Описание правила работы бота")
+            st.markdown("#### Правило работы бота")
             for item in value:
                 st.markdown(f"- {item}")
 
         elif key == "journal_05_05":
-            st.markdown("#### Журнал за 05.05")
-            st.table(value)
+            render_df_table(value, "Журнал за 05.05")
 
         elif key == "journal_06_05":
-            st.markdown("#### Журнал за 06.05")
-            st.table(value)
+            render_df_table(value, "Журнал за 06.05")
 
         elif key == "repo_access":
             st.markdown("#### Доступ к репозиторию")
@@ -97,14 +109,11 @@ def render_materials(materials: dict):
             st.code(value, language="python")
 
         elif key == "suspects_table":
-            st.markdown("#### Таблица подозреваемых")
-            st.table(value)
+            render_df_table(value, "Таблица подозреваемых")
 
         else:
             st.markdown(f"#### {key}")
             st.write(value)
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # =========================
@@ -118,9 +127,9 @@ html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
 }
 
-html, body, .stApp {
-    background: linear-gradient(180deg, #f4f7fb 0%, #eef3f9 100%);
-    color: #162033;
+html, body, .stApp, [data-testid="stAppViewContainer"] {
+    background: linear-gradient(180deg, #f4f7fb 0%, #edf2f8 100%);
+    color: #152033;
 }
 
 header[data-testid="stHeader"] {
@@ -136,135 +145,100 @@ header[data-testid="stHeader"] {
     display: none;
 }
 
+[data-testid="stStatusWidget"] {
+    display: none;
+}
+
 .block-container {
-    max-width: 1450px;
-    padding-top: 0.2rem;
-    padding-bottom: 1.5rem;
+    max-width: 1520px;
+    padding-top: 0.35rem;
+    padding-bottom: 1.4rem;
 }
 
 .top-banner {
-    background: linear-gradient(135deg, #0f172a 0%, #15345f 100%);
-    border-radius: 24px;
-    padding: 24px 28px;
+    background: linear-gradient(135deg, #162338 0%, #21456e 100%);
+    border-radius: 28px;
+    padding: 24px 30px;
     color: white;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
-    margin-bottom: 18px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+    margin-bottom: 20px;
 }
 
 .top-kicker {
-    font-size: 0.78rem;
-    opacity: 0.82;
-    margin-bottom: 8px;
+    font-size: 0.76rem;
+    opacity: 0.8;
+    margin-bottom: 7px;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     font-weight: 700;
 }
 
 .top-title {
-    font-size: 2rem;
+    font-size: 2.1rem;
     font-weight: 800;
     margin-bottom: 8px;
+    line-height: 1.15;
 }
 
 .top-subtitle {
     font-size: 0.98rem;
-    opacity: 0.92;
-    max-width: 880px;
+    opacity: 0.94;
+    max-width: 920px;
     line-height: 1.55;
-}
-
-.metric-card {
-    background: rgba(255,255,255,0.97);
-    border: 1px solid #dbe3ee;
-    border-radius: 18px;
-    padding: 14px 16px;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
-    margin-bottom: 12px;
-}
-
-.metric-label {
-    font-size: 0.82rem;
-    color: #6b7b93;
-    margin-bottom: 6px;
-    font-weight: 600;
-}
-
-.metric-value {
-    font-size: 1.14rem;
-    font-weight: 800;
-    color: #0f172a;
-}
-
-.panel {
-    background: rgba(255,255,255,0.97);
-    border: 1px solid #dbe3ee;
-    border-radius: 22px;
-    padding: 18px;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
-    margin-bottom: 14px;
-}
-
-.panel-title {
-    font-size: 1.03rem;
-    font-weight: 800;
-    margin-bottom: 4px;
-    color: #0f172a;
-}
-
-.panel-subtitle {
-    font-size: 0.92rem;
-    color: #64748b;
-    margin-bottom: 12px;
-}
-
-.tag {
-    display: inline-block;
-    background: #e8edff;
-    color: #3730a3;
-    border-radius: 999px;
-    padding: 6px 10px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    margin: 0 6px 6px 0;
 }
 
 .chat-shell {
     background: #ffffff;
-    border: 1.5px solid #cfd9e8;
-    border-radius: 24px;
+    border: 1px solid #ccd7e7;
+    border-radius: 26px;
     overflow: hidden;
     box-shadow:
         0 2px 8px rgba(15, 23, 42, 0.05),
         0 18px 42px rgba(15, 23, 42, 0.10);
-    outline: 3px solid rgba(59, 130, 246, 0.08);
+    outline: 4px solid rgba(59, 130, 246, 0.05);
 }
 
 .chat-header {
-    padding: 18px 20px 14px 20px;
-    border-bottom: 1px solid #d8e2f0;
-    background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+    padding: 16px 18px 12px 18px;
+    border-bottom: 1px solid #d9e3f0;
+    background: linear-gradient(180deg, #ffffff 0%, #f2f7ff 100%);
+}
+
+.chat-title {
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: #102136;
+    margin-bottom: 4px;
+}
+
+.chat-subtitle {
+    font-size: 0.92rem;
+    color: #607089;
+    line-height: 1.45;
 }
 
 .chat-stage {
     display: inline-block;
-    margin-top: 8px;
-    padding: 5px 10px;
+    margin-top: 10px;
+    padding: 6px 11px;
     border-radius: 999px;
-    background: #e0e7ff;
-    color: #3730a3;
+    background: #e6edff;
+    color: #3741a8;
     font-size: 0.76rem;
     font-weight: 700;
 }
 
 .chat-scroll {
-    padding: 16px 18px 12px 18px;
-    background: #f8fbff;
+    padding: 18px 20px 12px 20px;
+    background:
+        radial-gradient(circle at top right, rgba(59,130,246,0.05), transparent 18%),
+        #f8fbff;
     min-height: 100%;
 }
 
 .chat-footer {
-    padding: 16px 20px 18px 20px;
-    border-top: 1px solid #d8e2f0;
+    padding: 18px 22px 20px 22px;
+    border-top: 1px solid #d9e3f0;
     background: #ffffff;
 }
 
@@ -282,60 +256,90 @@ header[data-testid="stHeader"] {
     justify-content: flex-end;
 }
 
+            
 .msg-vanya {
-    background: #eef4ff;
-    color: #18253d;
-    border: 1px solid #dbe7ff;
+    background: #edf4ff;
+    color: #16253d;
+    border: 1px solid #d9e7ff;
     border-radius: 18px 18px 18px 8px;
-    padding: 12px 14px;
-    max-width: 78%;
-    line-height: 1.5;
+    padding: 10px 13px;
+    max-width: 68%;
+    line-height: 1.42;
+    font-size: 0.95rem;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.03);
 }
 
 .msg-you {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    background: linear-gradient(135deg, #2457d6 0%, #1f46b5 100%);
     color: white;
     border-radius: 18px 18px 8px 18px;
-    padding: 12px 14px;
-    max-width: 78%;
-    line-height: 1.5;
+    padding: 10px 13px;
+    max-width: 68%;
+    line-height: 1.42;
+    font-size: 0.95rem;
+    box-shadow: 0 6px 14px rgba(37, 87, 214, 0.18);
 }
 
 .msg-name {
-    font-size: 0.76rem;
+    font-size: 0.71rem;
     font-weight: 800;
     margin-bottom: 5px;
-    opacity: 0.85;
+    opacity: 0.82;
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
 
-.answer-box {
-    background: rgba(255,255,255,0.97);
-    border: 1px solid #dbe3ee;
-    border-radius: 18px;
-    padding: 14px 15px;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
-    margin-bottom: 12px;
+
+.stTextArea textarea {
+    border-radius: 16px !important;
+    border: 1px solid #ccd7e7 !important;
+    background: #ffffff !important;
+    color: #132134 !important;
+    box-shadow: none !important;
 }
 
-.answer-label {
-    font-size: 0.8rem;
-    color: #64748b;
-    font-weight: 700;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-.answer-value {
-    font-size: 0.98rem;
-    color: #0f172a;
+.stTextArea label {
+    color: #4a5b73 !important;
     font-weight: 600;
-    line-height: 1.45;
+}
+
+button[kind="primary"] {
+    border-radius: 14px !important;
+}
+
+button[kind="secondary"] {
+    border-radius: 14px !important;
+}
+
+[data-testid="stDataFrame"] {
+    border: 1px solid #dbe4f0;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+/* обычные streamlit-блоки в боковых колонках */
+.side-section {
+    background: rgba(255,255,255,0.78);
+    border: 1px solid #dce5f1;
+    border-radius: 18px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
+}
+
+.side-section h4 {
+    margin: 0 0 6px 0;
+    color: #122136;
+}
+
+.muted {
+    color: #6b7a8f;
+    font-size: 0.92rem;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 # =========================
 # TOP BANNER
@@ -351,47 +355,41 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-left_col, center_col, right_col = st.columns([1.05, 2.3, 1.2], gap="large")
+left_col, center_col, right_col = st.columns([0.9, 2.7, 1.0], gap="large")
+
 
 # =========================
 # LEFT
 # =========================
 with left_col:
-    st.markdown(
-        f'<div class="metric-card"><div class="metric-label">Прогресс</div><div class="metric-value">{progress}%</div></div>',
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        f'<div class="metric-card"><div class="metric-label">Кейс</div><div class="metric-value">{st.session_state.case_title}</div></div>',
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        f'<div class="metric-card"><div class="metric-label">Уровень</div><div class="metric-value">{st.session_state.difficulty}</div></div>',
-        unsafe_allow_html=True
-    )
+    st.markdown("#### Прогресс")
+    st.progress(max(progress, 1) / 100)
+    st.write(f"**{progress}%**")
 
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
-    st.markdown('<div class="panel-title">Навыки</div>', unsafe_allow_html=True)
-    st.markdown('<div class="panel-subtitle">Промежуточная оценка прохождения.</div>', unsafe_allow_html=True)
-    st.markdown(f'<span class="tag">Безопасность: {format_score(summary["security"])}</span>', unsafe_allow_html=True)
-    st.markdown(f'<span class="tag">Алгоритмы: {format_score(summary["rules"])}</span>', unsafe_allow_html=True)
-    st.markdown(f'<span class="tag">Код: {format_score(summary["code"])}</span>', unsafe_allow_html=True)
-    st.markdown(f'<span class="tag">Гипотеза: {format_score(summary["hypothesis"])}</span>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("#### Кейс")
+    st.write(st.session_state.case_title)
 
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
-    st.markdown('<div class="panel-title">Факты и улики</div>', unsafe_allow_html=True)
-    st.markdown('<div class="panel-subtitle">Что уже удалось зафиксировать.</div>', unsafe_allow_html=True)
+    st.markdown("#### Уровень")
+    st.write(st.session_state.difficulty)
+
+    st.markdown("#### Навыки")
+    st.caption("Как продвигается разбор кейса.")
+    st.write(f"Безопасность: {format_score(summary['security'])}")
+    st.write(f"Алгоритмы: {format_score(summary['rules'])}")
+    st.write(f"Код: {format_score(summary['code'])}")
+    st.write(f"Гипотеза: {format_score(summary['hypothesis'])}")
+
+    st.markdown("#### Улики")
     if st.session_state.evidence:
         for item in st.session_state.evidence:
             st.markdown(f"- {item}")
     else:
         st.write("Пока улик ещё нет.")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     if st.button("Начать заново", use_container_width=True):
         reset_state(st)
         st.rerun()
+
 
 # =========================
 # CENTER
@@ -400,13 +398,13 @@ with center_col:
     st.markdown('<div class="chat-shell">', unsafe_allow_html=True)
     st.markdown("""
     <div class="chat-header">
-        <div class="panel-title">Диалог с Ваней</div>
-        <div class="panel-subtitle">Смотри реплики, изучай материалы и отвечай как участник расследования.</div>
-        <div class="chat-stage">Текущее состояние расследования</div>
+        <div class="chat-title">Диалог с Ваней</div>
+        <div class="chat-subtitle">Следи за сообщениями, смотри материалы и отвечай как участник расследования.</div>
+        <div class="chat-stage">Центральная линия расследования</div>
     </div>
     """, unsafe_allow_html=True)
 
-    chat_history_box = st.container(height=520)
+    chat_history_box = st.container(height=500)
     with chat_history_box:
         st.markdown('<div class="chat-scroll">', unsafe_allow_html=True)
 
@@ -438,10 +436,8 @@ with center_col:
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-    if current_materials:
-        render_materials(current_materials)
-
-    st.markdown('<div class="chat-footer">', unsafe_allow_html=True)
+    if materials_to_show:
+        render_materials(materials_to_show)
 
     if not is_finished(st):
         if current_question:
@@ -451,11 +447,11 @@ with center_col:
             user_answer = st.text_area(
                 "Напиши ответ",
                 key=answer_key,
-                height=160,
+                height=140,
                 placeholder="Напиши здесь свой ответ..."
             )
 
-            btn_col1, btn_col2 = st.columns([1, 1.2])
+            btn_col1, btn_col2 = st.columns([1, 1])
 
             with btn_col1:
                 if st.button("Отправить ответ", type="primary", use_container_width=True):
@@ -482,55 +478,26 @@ with center_col:
             st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+
 
 # =========================
 # RIGHT
 # =========================
 with right_col:
-    st.markdown('<div class="answer-box">', unsafe_allow_html=True)
-    st.markdown('<div class="answer-label">Текущая гипотеза</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="answer-value">{get_hypothesis(st)}</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("#### Гипотеза")
+    st.write(get_hypothesis(st))
 
-    st.markdown('<div class="answer-box">', unsafe_allow_html=True)
-    st.markdown('<div class="answer-label">Подсказочные узлы</div>', unsafe_allow_html=True)
+    st.markdown("#### Подсказки")
     if summary["hint_nodes_used"]:
         for hint_id in summary["hint_nodes_used"]:
             st.markdown(f"- {hint_id}")
     else:
-        st.write("Подсказки пока не использовались.")
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.write("Пока не использовались.")
 
-    st.markdown('<div class="answer-box">', unsafe_allow_html=True)
-    st.markdown('<div class="answer-label">Исследовательский режим</div>', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="answer-value">Посещено узлов: {len(summary["visited_nodes"])}<br>Использовано подсказок: {len(summary["hint_nodes_used"])}</div>',
-        unsafe_allow_html=True
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
-    st.markdown('<div class="panel-title">Teacher summary</div>', unsafe_allow_html=True)
-    st.markdown('<div class="panel-subtitle">Краткая сводка для анализа прохождения.</div>', unsafe_allow_html=True)
-
-    st.markdown(f"- Безопасность: {summary['security']}")
-    st.markdown(f"- Алгоритмы и данные: {summary['rules']}")
-    st.markdown(f"- Код: {summary['code']}")
-    st.markdown(f"- Гипотеза: {summary['hypothesis']}")
-
-    st.markdown("#### Узлы с подсказками")
-    if summary["hint_nodes_used"]:
-        for node_id in summary["hint_nodes_used"]:
-            st.markdown(f"- {node_id}")
-    else:
-        st.write("Нет.")
-
-    st.markdown("#### Посещённые узлы")
-    if summary["visited_nodes"]:
-        for node_id in summary["visited_nodes"]:
-            st.markdown(f"- {node_id}")
-    else:
-        st.write("Пока пусто.")
-
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("#### Сводка")
+    st.caption("Краткая картина прохождения.")
+    st.write(f"Безопасность: {summary['security']}")
+    st.write(f"Алгоритмы и данные: {summary['rules']}")
+    st.write(f"Код: {summary['code']}")
+    st.write(f"Гипотеза: {summary['hypothesis']}")
+    st.write(f"Посещено узлов: {len(summary['visited_nodes'])}")
