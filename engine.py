@@ -104,6 +104,7 @@ def count_distinct_groups(text: str, groups):
 
 # --- КЛАССИФИКАТОРЫ ПО УЗЛАМ --- #
 
+
 def classify_intro(answer: str):
     text = normalize_text(answer)
     if is_empty_answer(answer):
@@ -118,22 +119,18 @@ def classify_t1_suspicious(answer: str):
     if is_empty_answer(answer):
         return "bad"
 
-    # номера и упоминания
-    suspicious_ids = count_any(text, ["4", "5", "6", "8"])
-    # фишинг, домен, выманивание данных
+    suspicious_ids = count_any(text, ["4", "5", "6", "7", "8"])
     phishing = count_distinct_groups(text, [
-        ["фиш", "поддельн", "левый", "домен", "ссылк", "подозр ссылк"],
+        ["фиш", "поддельн", "левый", "домен", "ссылк"],
         ["логин", "парол", "данн", "выман", "мошенн"],
     ])
-    # вложения и опасные файлы
     attachments = count_distinct_groups(text, [
         [".exe", "exe", "запуск", "вложен"],
-        ["xlsm", "макрос", "макросы"],
+        ["xlsm", "макрос"],
     ])
-    # приватность
     privacy = count_distinct_groups(text, [
         ["личн", "переписк", "скрин", "приват", "утеч"],
-        ["контакт", "контактов", "список номеров"],
+        ["контакт", "список", "номеров", "связи"],
     ])
 
     signals = phishing + attachments + privacy
@@ -141,6 +138,24 @@ def classify_t1_suspicious(answer: str):
     if suspicious_ids >= 2 and signals >= 2:
         return "good"
     if suspicious_ids >= 1 and signals >= 1:
+        return "neutral"
+    return "bad"
+
+
+def classify_t1_reflect(answer: str):
+    text = normalize_text(answer)
+    if is_empty_answer(answer):
+        return "bad"
+
+    weirdness = count_distinct_groups(text, [
+        ["не сход", "странн", "нелогич"],
+        ["угроз", "шантаж", "слив", "приват"],
+        ["бот", "сообщен", "в переписку", "отношен"],
+    ])
+
+    if weirdness >= 2:
+        return "good"
+    if weirdness >= 1:
         return "neutral"
     return "bad"
 
@@ -177,62 +192,30 @@ def classify_t1_actions(answer: str):
     return "neutral"
 
 
-def classify_t1_group_recs(answer: str):
+def classify_t1_hypothesis(answer: str):
     text = normalize_text(answer)
     if is_empty_answer(answer):
         return "bad"
 
-    # базовая цифровая гигиена
-    hygiene = count_distinct_groups(text, [
-        ["не открыв", "не скачив", "не запуск"],
-        ["не переход", "подозр", "странн ссылк"],
-        ["обновить парол", "менять парол"],
-        ["2fa", "двухфактор"],
+    suspects = count_any(text, ["варя", "дима", "кирилл", "илья", "ася", "бот"])
+    motives = count_distinct_groups(text, [
+        ["выгод", "мотив", "захотел", "обидел", "ревност", "симпат"],
+        ["контроль", "следить", "подстав", "пошутить", "тролл"],
     ])
-    help = count_distinct_groups(text, [
-        ["админ", "модератор", "учител", "классн"],
-        ["позвать взросл", "позвать взрослого"],
-        ["сообщить", "написать", "предупред"],
-    ])
-    privacy = count_distinct_groups(text, [
-        ["личн", "переписк", "скрин", "приват"],
-        ["контакт", "телефон", "номеров", "email"],
+    evidence = count_distinct_groups(text, [
+        ["сообщен", "угроз", "слив", "таблиц", "журнал"],
+        ["бот", "доступ", "код"],
     ])
 
-    signals = hygiene + help + privacy
-
-    if signals >= 4:
+    score = suspects + motives + evidence
+    if suspects >= 1 and (motives + evidence) >= 2:
         return "good"
-    if signals >= 2:
+    if suspects >= 1 and (motives + evidence) >= 1:
         return "neutral"
     return "bad"
 
 
-def classify_t2_rule_explanation(answer: str):
-    text = normalize_text(answer)
-    if is_empty_answer(answer):
-        return "bad"
-
-    parts = count_distinct_groups(text, [
-        ["обыч", "обычное напоминание"],
-        ["личн", "personal_warning", "личное напоминание"],
-        ["строг", "strict", "строгое"],
-        ["ничего", "no_message", "не отправ"],
-        ["пропущ", "подряд"],
-        ["просроч", "за месяц"],
-        [">= 2", "две", "2"],
-        [">= 3", "три", "3"],
-        [">= 5", "пять", "5"],
-    ])
-
-    if parts >= 5:
-        return "good"
-    if parts >= 2:
-        return "neutral"
-    return "bad"
-
-
-def classify_t2_journal1(answer: str):
+def classify_t2_rule_apply_journal1(answer: str):
     text = normalize_text(answer)
     if is_empty_answer(answer):
         return "bad"
@@ -315,95 +298,107 @@ def classify_t2_assessment(answer: str):
     return "bad"
 
 
-def classify_t3_code_intro(answer: str):
+def classify_t2_update_hypothesis(answer: str):
     text = normalize_text(answer)
     if is_empty_answer(answer):
         return "bad"
 
-    func = count_distinct_groups(text, [
-        ["classify_user"],
-        ["функц", "функция"],
-        ["возвращ", "return"],
-        ["тип сообщ", "какие сообщени"],
+    suspects = count_any(text, ["варя", "дима", "кирилл", "илья", "ася", "бот"])
+    evidence = count_distinct_groups(text, [
+        ["журнал", "таблиц", "05.05", "06.05"],
+        ["правил", "услов", "тип сообщ"],
+        ["особое сообщен", "особые сообщения"],
     ])
 
-    flag = count_distinct_groups(text, [
-        ["special_flag", "спешал флаг", "особ", "флаг"],
-        ["раньше", "сначала", "первым"],
-        ["обходит правило", "обход"],
-    ])
-
-    outputs = count_any(text, [
-        "special_message", "personal_warning",
-        "strict_warning", "no_message", "regular_reminder",
-        "особое сообщение", "личное", "строгое",
-    ])
-
-    users = count_any(text, ["anton", "asya", "masha", "vanya", "антон", "ася", "маша", "ваня"])
-
-    if func >= 1 and flag >= 1 and (outputs >= 2 or users >= 2):
+    if suspects >= 1 and evidence >= 2:
         return "good"
-    if func >= 1 or flag >= 1 or outputs >= 1:
+    if suspects >= 1 and evidence >= 1:
         return "neutral"
     return "bad"
 
 
-def classify_t3_code_change(answer: str):
+def classify_t3_code_mismatch(answer: str):
     text = normalize_text(answer)
     if is_empty_answer(answer):
         return "bad"
 
-    review = count_distinct_groups(text, [
-        ["to_review", "review", "список", "списке"],
-        ["вручную", "ручн", "человек", "проверять человеком"],
+    mentions_special = count_distinct_groups(text, [
+        ["special_flag", "флаг"],
+        ["обходит правило", "обход", "раньше", "перв", "до остальн"],
+    ])
+    mentions_sign = count_distinct_groups(text, [
+        ["> 2", "больше двух", "строже", "знак"],
+        ["должно быть", "должен быть", ">= 2", "больше или равно"],
+    ])
+    mentions_fix = count_distinct_groups(text, [
+        ["исправ", "поменять", "перепис", "изменить условие"],
+        ["соответств", "как в правиле"],
     ])
 
-    no_special = count_distinct_groups(text, [
-        ["не отправ", "не слать"],
-        ["не возвращ", "не return"],
-        ["не special_message", "без special_message", "без особого сообщения"],
-    ])
-
-    same_logic = count_distinct_groups(text, [
-        ["остальная логика"],
-        ["как раньше"],
-        ["иначе", "else", "остальн"],
-    ])
-
-    if review >= 1 and no_special >= 1 and same_logic >= 1:
+    if mentions_special >= 1 and mentions_sign >= 1 and mentions_fix >= 1:
         return "good"
-    if review >= 1 or no_special >= 1:
+    if mentions_special >= 1 or mentions_sign >= 1:
         return "neutral"
     return "bad"
 
 
-def classify_t3_find_suspicious(answer: str):
+def classify_t3_logs_function(answer: str):
     text = normalize_text(answer)
     if is_empty_answer(answer):
         return "bad"
 
-    fn = count_distinct_groups(text, [
-        ["find_suspicious"],
-        ["events", "список событий", "журнал"],
-        ["вход", "на вход", "параметр"],
-        ["возвращ", "список имен", "список имён", "результат"],
+    mentions_fn = count_distinct_groups(text, [
+        ["def", "функц", "function"],
+        ["visits"],
+        ["n", "последн"],
+    ])
+    mentions_fields = count_distinct_groups(text, [
+        ["user", "пользовател"],
+        ["time", "время", "дата"],
+        ["file", "файл"],
     ])
 
-    rule = count_distinct_groups(text, [
-        ["special_message", "особое сообщение"],
-        ["rule_ok", "не по правилу", "нарушает правило"],
-        ["фильтр", "провер", "отбирать"],
-    ])
-
-    limits = count_distinct_groups(text, [
-        ["огранич", "не увид", "не видит"],
-        ["человек", "вручную", "проверять человеком"],
-        ["контекст", "ошиб", "ложн"],
-    ])
-
-    if fn >= 1 and rule >= 1 and limits >= 1:
+    if mentions_fn >= 1 and mentions_fields >= 1:
         return "good"
-    if fn >= 1 or rule >= 1:
+    if mentions_fn >= 1 or mentions_fields >= 1:
+        return "neutral"
+    return "bad"
+
+
+def classify_t3_logs_observation(answer: str):
+    text = normalize_text(answer)
+    if is_empty_answer(answer):
+        return "bad"
+
+    mentions_patterns = count_distinct_groups(text, [
+        ["варя", "почти не", "не появл"],
+        ["дима", "ноч", "ночью"],
+        ["кирилл", "часто", "logic.py", "логик"],
+    ])
+
+    if mentions_patterns >= 2:
+        return "good"
+    if mentions_patterns >= 1:
+        return "neutral"
+    return "bad"
+
+
+def classify_t3_final_hypothesis(answer: str):
+    text = normalize_text(answer)
+    if is_empty_answer(answer):
+        return "bad"
+
+    suspects = count_any(text, ["варя", "дима", "кирилл", "илья", "ася", "бот"])
+    evidence = count_distinct_groups(text, [
+        ["сообщен", "угроз", "слив"],
+        ["журнал", "таблиц", "лог"],
+        ["код", "флаг", "special_flag", "logic.py"],
+        ["доступ", "репозитор"],
+    ])
+
+    if suspects >= 1 and evidence >= 2:
+        return "good"
+    if suspects >= 1 and evidence >= 1:
         return "neutral"
     return "bad"
 
@@ -420,12 +415,12 @@ def classify_final(answer: str):
     mentions_kirill = has_any(text, names["kirill"])
     technical_reasoning = count_distinct_groups(text, [
         ["код", "репозитор", "доступ", "репозиторий"],
-        ["special_flag", "флаг", "логик", "логика"],
-        ["лог", "журнал", "особое сообщение"],
-        ["трогал код", "менял", "коммит", "изменен"],
+        ["special_flag", "флаг", "логик", "logic.py"],
+        ["лог", "журнал", "особ", "тип сообщен"],
+        ["трогал код", "менял", "изменен"],
     ])
 
-    uncertainty = has_any(text, ["не уверен", "не знаю", "сложно сказать", "не уверенна", "не уверена"])
+    uncertainty = has_any(text, ["не уверен", "не знаю", "сложно сказать", "не уверена", "сомнева"])
 
     if mentions_kirill and technical_reasoning >= 2:
         return "good_kirill"
@@ -445,17 +440,17 @@ def classify_answer(answer: str, node_id: str):
     if node_id in ["t1_security_intro", "t1_security_hint"]:
         return classify_t1_suspicious(answer)
 
+    if node_id == "t1_security_reflect":
+        return classify_t1_reflect(answer)
+
     if node_id in ["t1_security_vanya_ideas", "t1_security_ideas_hint"]:
         return classify_t1_actions(answer)
 
-    if node_id == "t1_security_group_recs":
-        return classify_t1_group_recs(answer)
+    if node_id == "t1_security_hypothesis":
+        return classify_t1_hypothesis(answer)
 
-    if node_id == "t2_rules_intro":
-        return classify_t2_rule_explanation(answer)
-
-    if node_id in ["t2_rules_journal1", "t2_rules_hint"]:
-        return classify_t2_journal1(answer)
+    if node_id in ["t2_rules_intro", "t2_rules_journal1_answer", "t2_rules_hint"]:
+        return classify_t2_rule_apply_journal1(answer)
 
     if node_id in ["t2_rules_journal2", "t2_rules_journal2_hint"]:
         return classify_t2_journal2(answer)
@@ -463,14 +458,20 @@ def classify_answer(answer: str, node_id: str):
     if node_id == "t2_rules_assessment":
         return classify_t2_assessment(answer)
 
+    if node_id == "t2_update_hypothesis":
+        return classify_t2_update_hypothesis(answer)
+
     if node_id in ["t3_code_intro", "t3_code_intro_hint"]:
-        return classify_t3_code_intro(answer)
+        return classify_t3_code_mismatch(answer)
 
-    if node_id == "t3_code_change":
-        return classify_t3_code_change(answer)
+    if node_id == "t3_logs_intro":
+        return classify_t3_logs_function(answer)
 
-    if node_id == "t3_code_find_suspicious":
-        return classify_t3_find_suspicious(answer)
+    if node_id == "t3_logs_results":
+        return classify_t3_logs_observation(answer)
+
+    if node_id == "t3_logs_hypothesis_update":
+        return classify_t3_final_hypothesis(answer)
 
     if node_id == "final_question":
         return classify_final(answer)
@@ -478,7 +479,8 @@ def classify_answer(answer: str, node_id: str):
     return "default"
 
 
-# --- СБОР УЛИК И СКОРОРИНГ --- #
+# --- СБОР УЛИК И СКОРИНГ --- #
+
 
 def extract_evidence(answer: str):
     text = normalize_text(answer)
@@ -487,16 +489,19 @@ def extract_evidence(answer: str):
     if has_any(text, ["фиш", "домен", ".exe", "exe", "подозр", "личн", "скрин", "парол", "xlsm", "макрос"]):
         found.append("Ученик(ца) замечает признаки цифровой угрозы: фишинг, опасные вложения или утечку приватных данных.")
 
-    if has_any(text, ["правил", "журнал", "лог", "не сход", "несоответ", "особое сообщение"]):
-        found.append("Ученик(ца) сопоставляет журнал бота с официальным правилом и видит несоответствия.")
+    if has_any(text, ["правил", "услов", "журнал", "таблиц", "не сход", "несоответ", "особое сообщ"]):
+        found.append("Ученик(ца) сопоставляет журналы работы бота с официальным правилом и видит несоответствия.")
 
-    if has_any(text, ["special_flag", "return", "if", "код", "обход", "логик", "to_review", "find_suspicious"]):
-        found.append("Ученик(ца) замечает, что код позволяет обходить основную логику через специальный флаг и функции анализа.")
+    if has_any(text, ["special_flag", "return", "if", "код", "обход", "логик", "logic.py", "условие", "знак >"]):
+        found.append("Ученик(ца) замечает, что в коде есть баги и специальный флаг, через который можно обойти основную логику.")
 
-    if has_any(text, ["доступ", "репозитор", "трогал код", "кирилл", "дима", "подозреваем", "проверить"]):
+    if has_any(text, ["лог", "журнал заходов", "visits", "кто заходил", "какой файл", "logic.py", "ночью", "ночн"]):
+        found.append("Ученик(ца) использует журнал заходов в код, чтобы увидеть, кто и когда менял файлы бота.")
+
+    if has_any(text, ["доступ", "репозитор", "трогал код", "кирилл", "дима", "варя", "подозр", "проверить", "главный подозреваем"]):
         found.append("Ученик(ца) связывает технические факты с кругом доступа и формулирует гипотезу расследования.")
 
-    if has_any(text, ["взросл", "админ", "не откры", "2fa", "сменить парол", "рекомендац"]):
+    if has_any(text, ["взросл", "админ", "не откры", "2fa", "сменить парол", "рекомендац", "безопасност"]):
         found.append("Ученик(ца) предлагает осмысленные рекомендации по цифровой безопасности для группы.")
 
     return found
@@ -544,7 +549,7 @@ def submit_answer(st, answer: str):
     if next_node:
         move_to_node(st, next_node)
 
-    return branch_type  # <- добавили
+    return branch_type
 
 
 def get_progress(st):
@@ -566,12 +571,12 @@ def get_hypothesis(st):
 
     if "final_suspect" in answers:
         return answers["final_suspect"]
-    if "t3_find_suspicious" in answers:
-        return "Появляется версия о злоупотреблении доступом и обходе правил через код."
-    if "t3_code_change" in answers:
-        return "Ученик(ца) понимает, что special_flag не должен автоматически запускать особые сообщения."
-    if "t2_journal2_anomalies" in answers or "t2_journal2_anomalies_hint" in answers:
-        return "Ученик(ца) видит несоответствия между правилом и журналом, особенно вокруг особых сообщений."
+    if "t3_final_hypothesis" in answers:
+        return answers["t3_final_hypothesis"]
+    if "t2_updated_hypothesis" in answers:
+        return answers["t2_updated_hypothesis"]
+    if "t1_first_hypothesis" in answers:
+        return answers["t1_first_hypothesis"]
     if "t1_suspicious_items" in answers or "t1_suspicious_items_hint" in answers:
         return "Гипотеза строится вокруг подозрительных сообщений и угроз приватности."
     return "Гипотеза ещё не сформирована."
