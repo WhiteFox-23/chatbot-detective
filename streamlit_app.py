@@ -112,30 +112,39 @@ def render_ai_report(report: dict):
     final_h = report.get("final_hypothesis_quality", {}) or {}
 
     st.markdown("### Общая картина")
-    st.markdown(
-        f"""
-        <div class="ai-summary-card">
-            <div class="ai-summary-row">
-                <div class="ai-summary-label">Критическое мышление</div>
-                <div>{level_badge(ct.get("overall_level", "—"))}</div>
-            </div>
-            <div class="ai-summary-meta">Балл: {ct.get("score", 0)}</div>
 
-            <div class="ai-summary-row" style="margin-top:12px;">
-                <div class="ai-summary-label">Предметные знания</div>
-                <div>{level_badge(subj.get("overall_level", "—"))}</div>
-            </div>
-            <div class="ai-summary-meta">Балл: {subj.get("score", 0)}</div>
+    for title, level, score, meta in [
+        (
+            "Критическое мышление",
+            ct.get("overall_level", "—"),
+            ct.get("score", 0),
+            f"Балл: {ct.get('score', 0)}",
+        ),
+        (
+            "Предметные знания",
+            subj.get("overall_level", "—"),
+            subj.get("score", 0),
+            f"Балл: {subj.get('score', 0)}",
+        ),
+        (
+            "Итоговая гипотеза",
+            final_h.get("level", "—"),
+            None,
+            final_h.get("comment", ""),
+        ),
+    ]:
+        st.markdown('<div class="ai-summary-card">', unsafe_allow_html=True)
 
-            <div class="ai-summary-row" style="margin-top:12px;">
-                <div class="ai-summary-label">Итоговая гипотеза</div>
-                <div>{level_badge(final_h.get("level", "—"))}</div>
-            </div>
-            <div class="ai-summary-meta">{final_h.get("comment", "")}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        col1, col2 = st.columns([2.2, 1])
+        with col1:
+            st.markdown(f'<div class="ai-summary-label">{title}</div>', unsafe_allow_html=True)
+        with col2:
+            st.markdown(level_badge(level), unsafe_allow_html=True)
+
+        if meta:
+            st.markdown(f'<div class="ai-summary-meta">{meta}</div>', unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
     ct_criteria = ct.get("criteria", {}) or {}
     if ct_criteria:
