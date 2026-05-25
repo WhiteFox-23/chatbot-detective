@@ -113,38 +113,36 @@ def render_ai_report(report: dict):
 
     st.markdown("### Общая картина")
 
-    for title, level, score, meta in [
-        (
-            "Критическое мышление",
-            ct.get("overall_level", "—"),
-            ct.get("score", 0),
-            f"Балл: {ct.get('score', 0)}",
-        ),
-        (
-            "Предметные знания",
-            subj.get("overall_level", "—"),
-            subj.get("score", 0),
-            f"Балл: {subj.get('score', 0)}",
-        ),
-        (
-            "Итоговая гипотеза",
-            final_h.get("level", "—"),
-            None,
-            final_h.get("comment", ""),
-        ),
-    ]:
-        st.markdown('<div class="ai-summary-card">', unsafe_allow_html=True)
+    summary_items = [
+        {
+            "title": "Критическое мышление",
+            "level": ct.get("overall_level", "—"),
+            "meta": f"Балл: {ct.get('score', 0)}",
+        },
+        {
+            "title": "Предметные знания",
+            "level": subj.get("overall_level", "—"),
+            "meta": f"Балл: {subj.get('score', 0)}",
+        },
+        {
+            "title": "Итоговая гипотеза",
+            "level": final_h.get("level", "—"),
+            "meta": final_h.get("comment", ""),
+        },
+    ]
 
-        col1, col2 = st.columns([2.2, 1])
-        with col1:
-            st.markdown(f'<div class="ai-summary-label">{title}</div>', unsafe_allow_html=True)
-        with col2:
-            st.markdown(level_badge(level), unsafe_allow_html=True)
+    for item in summary_items:
+        with st.container():
+            col1, col2 = st.columns([2.4, 1])
 
-        if meta:
-            st.markdown(f'<div class="ai-summary-meta">{meta}</div>', unsafe_allow_html=True)
+            with col1:
+                st.markdown(f"**{item['title']}**")
 
-        st.markdown('</div>', unsafe_allow_html=True)
+            with col2:
+                st.markdown(level_badge(item["level"]), unsafe_allow_html=True)
+
+            st.write(item["meta"])
+            st.markdown("")
 
     ct_criteria = ct.get("criteria", {}) or {}
     if ct_criteria:
