@@ -91,15 +91,15 @@ def level_badge(level: str) -> str:
     return f"""
     <span style="
         display:inline-block;
-        padding:6px 12px;
+        padding:6px 10px;
         border-radius:999px;
         background:{color}15;
         color:{color};
-        font-size:0.88rem;
+        font-size:0.84rem;
         font-weight:700;
         border:1px solid {color}33;
         white-space:nowrap;
-        min-width:96px;
+        min-width:88px;
         text-align:center;
     ">
         {safe_level}
@@ -625,15 +625,15 @@ button[kind="secondary"] {
     justify-content: space-between;
     align-items: flex-start;
     gap: 10px;
-    flex-wrap: wrap;
 }
 
 .ai-detail-title {
     font-weight: 800;
     color: #122136;
     line-height: 1.3;
-    flex: 1 1 160px;
+    flex: 1 1 auto;
     min-width: 0;
+    max-width: calc(100% - 120px);
 }
 
 .ai-detail-top > div:last-child {
