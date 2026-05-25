@@ -625,6 +625,19 @@ button[kind="secondary"] {
     justify-content: space-between;
     align-items: flex-start;
     gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ai-detail-title {
+    font-weight: 800;
+    color: #122136;
+    line-height: 1.3;
+    flex: 1 1 160px;
+    min-width: 0;
+}
+
+.ai-detail-top > div:last-child {
+    flex: 0 0 auto;
 }
 
 .ai-summary-label,
