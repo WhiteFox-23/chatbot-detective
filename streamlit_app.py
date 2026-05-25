@@ -64,6 +64,147 @@ def format_score(value: int) -> str:
         return "базовый"
     return "не проявлен"
 
+def pretty_label(name: str) -> str:
+    mapping = {
+        "interpretation": "Интерпретация",
+        "analysis": "Анализ",
+        "inference": "Выводы",
+        "evaluation": "Оценка",
+        "explanation": "Объяснение",
+        "digital_safety": "Цифровая безопасность",
+        "algorithms": "Алгоритмы",
+        "code": "Код",
+    }
+    return mapping.get(name, name.replace("_", " ").capitalize())
+
+
+def level_badge(level: str) -> str:
+    colors = {
+        "не проявлен": "#9aa6b2",
+        "базовый": "#8b5cf6",
+        "средний": "#2563eb",
+        "высокий": "#16a34a",
+    }
+    color = colors.get((level or "").lower(), "#475569")
+    return f"""
+    <span style="
+        display:inline-block;
+        padding:4px 10px;
+        border-radius:999px;
+        background:{color}15;
+        color:{color};
+        font-size:0.78rem;
+        font-weight:700;
+        border:1px solid {color}33;
+    ">
+        {level}
+    </span>
+    """
+
+
+def render_ai_report(report: dict):
+    if not report:
+        st.write("AI-анализ пока не сформирован. Заверши кейс и нажми кнопку выше.")
+        return
+
+    ct = report.get("critical_thinking", {}) or {}
+    subj = report.get("subject_knowledge", {}) or {}
+    final_h = report.get("final_hypothesis_quality", {}) or {}
+
+    st.markdown("### Общая картина")
+    st.markdown(
+        f"""
+        <div class="ai-summary-card">
+            <div class="ai-summary-row">
+                <div class="ai-summary-label">Критическое мышление</div>
+                <div>{level_badge(ct.get("overall_level", "—"))}</div>
+            </div>
+            <div class="ai-summary-meta">Балл: {ct.get("score", 0)}</div>
+
+            <div class="ai-summary-row" style="margin-top:12px;">
+                <div class="ai-summary-label">Предметные знания</div>
+                <div>{level_badge(subj.get("overall_level", "—"))}</div>
+            </div>
+            <div class="ai-summary-meta">Балл: {subj.get("score", 0)}</div>
+
+            <div class="ai-summary-row" style="margin-top:12px;">
+                <div class="ai-summary-label">Итоговая гипотеза</div>
+                <div>{level_badge(final_h.get("level", "—"))}</div>
+            </div>
+            <div class="ai-summary-meta">{final_h.get("comment", "")}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    ct_criteria = ct.get("criteria", {}) or {}
+    if ct_criteria:
+        st.markdown("### Критическое мышление")
+        for name, crit in ct_criteria.items():
+            st.markdown(
+                f"""
+                <div class="ai-detail-card">
+                    <div class="ai-detail-top">
+                        <div class="ai-detail-title">{pretty_label(name)}</div>
+                        <div>{level_badge(crit.get("level", "—"))}</div>
+                    </div>
+                    <div class="ai-detail-score">Балл: {crit.get("score", 0)}</div>
+                    <div class="ai-detail-comment">{crit.get("comment", "")}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    subj_areas = subj.get("areas", {}) or {}
+    if subj_areas:
+        st.markdown("### Предметные знания")
+        for name, area in subj_areas.items():
+            st.markdown(
+                f"""
+                <div class="ai-detail-card">
+                    <div class="ai-detail-top">
+                        <div class="ai-detail-title">{pretty_label(name)}</div>
+                        <div>{level_badge(area.get("level", "—"))}</div>
+                    </div>
+                    <div class="ai-detail-score">Балл: {area.get("score", 0)}</div>
+                    <div class="ai-detail-comment">{area.get("comment", "")}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    evidence_quotes = []
+    evidence_quotes.extend(ct.get("evidence_quotes", []) or [])
+    evidence_quotes.extend(subj.get("evidence_quotes", []) or [])
+
+    if evidence_quotes:
+        unique_quotes = []
+        for q in evidence_quotes:
+            if q not in unique_quotes:
+                unique_quotes.append(q)
+
+        st.markdown("### Опорные фрагменты")
+        for quote in unique_quotes[:6]:
+            st.markdown(
+                f"""
+                <div class="ai-quote-card">
+                    “{quote}”
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    teacher_rec = report.get("teacher_recommendation", "")
+    if teacher_rec:
+        st.markdown("### Рекомендация учителю")
+        st.markdown(
+            f"""
+            <div class="ai-recommendation-card">
+                {teacher_rec}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 def render_df_table(data, title: str):
     if not data:
@@ -383,6 +524,9 @@ header[data-testid="stHeader"] {
 
 button[kind="primary"] {
     border-radius: 14px !important;
+    background: linear-gradient(135deg, #2457d6 0%, #1f46b5 100%) !important;
+    border: none !important;
+    color: white !important;
 }
 
 button[kind="secondary"] {
@@ -444,6 +588,61 @@ button[kind="secondary"] {
     background: #f3f7fd;
     font-weight: 700;
     color: #132134;
+}
+
+.ai-summary-card,
+.ai-detail-card,
+.ai-quote-card,
+.ai-recommendation-card {
+    background: rgba(255,255,255,0.88);
+    border: 1px solid #dce5f1;
+    border-radius: 18px;
+    padding: 14px 15px;
+    margin-bottom: 12px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
+}
+
+.ai-summary-row,
+.ai-detail-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.ai-summary-label,
+.ai-detail-title {
+    font-weight: 800;
+    color: #122136;
+    line-height: 1.3;
+}
+
+.ai-summary-meta,
+.ai-detail-score {
+    margin-top: 4px;
+    font-size: 0.9rem;
+    color: #5d6d83;
+}
+
+.ai-detail-comment {
+    margin-top: 8px;
+    color: #223046;
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+
+.ai-quote-card {
+    border-left: 4px solid #93c5fd;
+    color: #223046;
+    line-height: 1.5;
+    font-size: 0.94rem;
+    background: #f8fbff;
+}
+
+.ai-recommendation-card {
+    background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+    color: #1d2d44;
+    line-height: 1.55;
 }
 </style>
 """,
@@ -595,22 +794,18 @@ with center_col:
         st.success("Расследование завершено.")
 
         # Кнопка для формирования AI-отчёта
-        if st.button(
-            "Сформировать AI-анализ прохождения",
-            type="primary",
-            use_container_width=True,
-        ):
-            st.write("Кнопка нажалась")
-            try:
-                st.write("Начинаю запрос к OpenRouter...")
-                report = generate_ai_teacher_report(report_input)
-                st.write("Ответ от OpenRouter получен")
-                st.write(report)
-
-                set_ai_teacher_report(st, report)
-                st.success("AI-анализ сформирован.")
-            except Exception as e:
-                st.error(f"Не удалось получить AI-анализ: {e}")
+    if st.button(
+        "Сформировать AI-анализ прохождения",
+        type="primary",
+        use_container_width=True,
+    ):
+        try:
+            report = generate_ai_teacher_report(report_input)
+            set_ai_teacher_report(st, report)
+            st.success("AI-анализ сформирован.")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Не удалось получить AI-анализ: {e}")
 
         if st.button(
             "Пройти кейс заново",
@@ -643,32 +838,6 @@ with right_col:
     st.write(f"Гипотеза: {summary['hypothesis']}")
     st.write(f"Посещено узлов: {len(summary['visited_nodes'])}")
 
-    st.markdown("#### AI-анализ (черновой)")
-    st.caption("Экспериментальный отчёт на основе ответов и хода расследования.")
-
-    if ai_report:
-        ct = ai_report.get("critical_thinking", {})
-        subj = ai_report.get("subject_knowledge", {})
-        final_h = ai_report.get("final_hypothesis_quality", {})
-        st.write(f"**Критическое мышление:** {ct.get('overall_level', '—')} (балл: {ct.get('score', 0)})")
-        st.write(f"**Предметные знания:** {subj.get('overall_level', '—')} (балл: {subj.get('score', 0)})")
-        st.write(f"**Качество итоговой гипотезы:** {final_h.get('level', '—')}")
-
-        with st.expander("Детали по критическому мышлению"):
-            for name, crit in (ct.get("criteria") or {}).items():
-                level = crit.get("level", "—")
-                score = crit.get("score", 0)
-                comment = crit.get("comment", "")
-                st.markdown(f"- **{name.capitalize()}** — {level} (балл: {score}). {comment}")
-
-        with st.expander("Детали по предметным знаниям"):
-            for name, area in (subj.get("areas") or {}).items():
-                level = area.get("level", "—")
-                score = area.get("score", 0)
-                comment = area.get("comment", "")
-                st.markdown(f"- **{name}** — {level} (балл: {score}). {comment}")
-
-        st.markdown("**Рекомендация учителю:**")
-        st.write(ai_report.get("teacher_recommendation", ""))
-    else:
-        st.write("AI-анализ пока не сформирован. Заверши кейс и нажми кнопку выше.")
+    st.markdown("#### AI-анализ")
+    st.caption("Автоматический отчёт по ответам ученика и ходу расследования.")
+    render_ai_report(ai_report)
