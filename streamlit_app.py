@@ -127,36 +127,38 @@ def render_ai_report(report: dict):
         {
             "title": "Итоговая гипотеза",
             "level": final_h.get("level", "—"),
-            "meta": final_h.get("comment", ""),
+            "meta": final_h.get("comment", "Комментарий пока отсутствует."),
         },
     ]
 
     for item in summary_items:
-        with st.container():
-            col1, col2 = st.columns([2.4, 1])
+        with st.container(border=True):
+            col1, col2 = st.columns([2.3, 1])
 
             with col1:
-                st.markdown(f"**{item['title']}**")
+                st.markdown(f"**{item.get('title', 'Без названия')}**")
 
             with col2:
-                st.markdown(level_badge(item["level"]), unsafe_allow_html=True)
+                st.markdown(level_badge(item.get("level", "—")), unsafe_allow_html=True)
 
-            st.write(item["meta"])
-            st.markdown("")
+            st.write(item.get("meta", ""))
 
     ct_criteria = ct.get("criteria", {}) or {}
     if ct_criteria:
         st.markdown("### Критическое мышление")
         for name, crit in ct_criteria.items():
+            level = crit.get("level", "—")
+            score = crit.get("score", 0)
+            comment = crit.get("comment", "")
             st.markdown(
                 f"""
                 <div class="ai-detail-card">
                     <div class="ai-detail-top">
                         <div class="ai-detail-title">{pretty_label(name)}</div>
-                        <div>{level_badge(crit.get("level", "—"))}</div>
+                        <div>{level_badge(level)}</div>
                     </div>
-                    <div class="ai-detail-score">Балл: {crit.get("score", 0)}</div>
-                    <div class="ai-detail-comment">{crit.get("comment", "")}</div>
+                    <div class="ai-detail-score">Балл: {score}</div>
+                    <div class="ai-detail-comment">{comment}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -166,15 +168,18 @@ def render_ai_report(report: dict):
     if subj_areas:
         st.markdown("### Предметные знания")
         for name, area in subj_areas.items():
+            level = area.get("level", "—")
+            score = area.get("score", 0)
+            comment = area.get("comment", "")
             st.markdown(
                 f"""
                 <div class="ai-detail-card">
                     <div class="ai-detail-top">
                         <div class="ai-detail-title">{pretty_label(name)}</div>
-                        <div>{level_badge(area.get("level", "—"))}</div>
+                        <div>{level_badge(level)}</div>
                     </div>
-                    <div class="ai-detail-score">Балл: {area.get("score", 0)}</div>
-                    <div class="ai-detail-comment">{area.get("comment", "")}</div>
+                    <div class="ai-detail-score">Балл: {score}</div>
+                    <div class="ai-detail-comment">{comment}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
