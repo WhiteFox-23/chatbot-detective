@@ -85,19 +85,24 @@ def level_badge(level: str) -> str:
         "средний": "#2563eb",
         "высокий": "#16a34a",
     }
-    color = colors.get((level or "").lower(), "#475569")
+    safe_level = (level or "—").strip()
+    color = colors.get(safe_level.lower(), "#475569")
+
     return f"""
     <span style="
         display:inline-block;
-        padding:4px 10px;
+        padding:6px 12px;
         border-radius:999px;
         background:{color}15;
         color:{color};
-        font-size:0.78rem;
+        font-size:0.88rem;
         font-weight:700;
         border:1px solid {color}33;
+        white-space:nowrap;
+        min-width:96px;
+        text-align:center;
     ">
-        {level}
+        {safe_level}
     </span>
     """
 
@@ -133,7 +138,7 @@ def render_ai_report(report: dict):
 
     for item in summary_items:
         with st.container(border=True):
-            col1, col2 = st.columns([2.3, 1])
+            col1, col2 = st.columns([2.1, 1.2])
 
             with col1:
                 st.markdown(f"**{item.get('title', 'Без названия')}**")
