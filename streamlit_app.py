@@ -13,6 +13,9 @@ from engine import (
     continue_without_answer,
     is_finished,
     reset_state,
+    get_ai_teacher_report,
+    set_ai_teacher_report,
+    generate_ai_teacher_report,
 )
 
 
@@ -28,8 +31,9 @@ st.set_page_config(
 init_state(st)
 start_scenario(st)
 
-summary = get_teacher_summary(st)
+summary, report_input = get_teacher_summary(st)
 progress = get_progress(st)
+ai_report = get_ai_teacher_report(st)
 current_question = get_question(st)
 current_node_id = st.session_state.current_node
 answer_key = f"answer_input_{current_node_id}"
@@ -587,12 +591,29 @@ with center_col:
             ):
                 continue_without_answer(st)
                 st.rerun()
-
     else:
         st.success("Расследование завершено.")
+
+        # Кнопка для формирования AI-отчёта
+        if st.button(
+            "Сформировать AI-анализ прохождения",
+            type="primary",
+            use_container_width=True,
+        ):
+            st.write("Кнопка нажалась")
+            try:
+                st.write("Начинаю запрос к OpenRouter...")
+                report = generate_ai_teacher_report(report_input)
+                st.write("Ответ от OpenRouter получен")
+                st.write(report)
+
+                set_ai_teacher_report(st, report)
+                st.success("AI-анализ сформирован.")
+            except Exception as e:
+                st.error(f"Не удалось получить AI-анализ: {e}")
+
         if st.button(
             "Пройти кейс заново",
-            type="primary",
             use_container_width=True,
         ):
             reset_state(st)
@@ -621,3 +642,33 @@ with right_col:
     st.write(f"Код: {summary['code']}")
     st.write(f"Гипотеза: {summary['hypothesis']}")
     st.write(f"Посещено узлов: {len(summary['visited_nodes'])}")
+
+    st.markdown("#### AI-анализ (черновой)")
+    st.caption("Экспериментальный отчёт на основе ответов и хода расследования.")
+
+    if ai_report:
+        ct = ai_report.get("critical_thinking", {})
+        subj = ai_report.get("subject_knowledge", {})
+        final_h = ai_report.get("final_hypothesis_quality", {})
+        st.write(f"**Критическое мышление:** {ct.get('overall_level', '—')} (балл: {ct.get('score', 0)})")
+        st.write(f"**Предметные знания:** {subj.get('overall_level', '—')} (балл: {subj.get('score', 0)})")
+        st.write(f"**Качество итоговой гипотезы:** {final_h.get('level', '—')}")
+
+        with st.expander("Детали по критическому мышлению"):
+            for name, crit in (ct.get("criteria") or {}).items():
+                level = crit.get("level", "—")
+                score = crit.get("score", 0)
+                comment = crit.get("comment", "")
+                st.markdown(f"- **{name.capitalize()}** — {level} (балл: {score}). {comment}")
+
+        with st.expander("Детали по предметным знаниям"):
+            for name, area in (subj.get("areas") or {}).items():
+                level = area.get("level", "—")
+                score = area.get("score", 0)
+                comment = area.get("comment", "")
+                st.markdown(f"- **{name}** — {level} (балл: {score}). {comment}")
+
+        st.markdown("**Рекомендация учителю:**")
+        st.write(ai_report.get("teacher_recommendation", ""))
+    else:
+        st.write("AI-анализ пока не сформирован. Заверши кейс и нажми кнопку выше.")

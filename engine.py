@@ -1,4 +1,7 @@
 from scenario_data import SCENARIO
+import json
+import requests
+import streamlit as st
 
 
 BASE_SCORES = {
@@ -23,6 +26,8 @@ def init_state(st):
         "scores": BASE_SCORES.copy(),
         "current_materials": {},
         "materials_by_node": {},
+        "answer_evaluations": [],
+        "ai_teacher_report": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -601,6 +606,16 @@ def submit_answer(st, answer: str):
     branch_type = classify_answer(clean_answer, node_id)
     update_scores(st, node_id, branch_type)
 
+    st.session_state.answer_evaluations.append({
+        "node_id": node_id,
+        "answer_key": answer_key,
+        "question": node.get("question"),
+        "student_answer": clean_answer,
+        "classification": branch_type,
+        "score_tags": node.get("score_tags", []),
+        "is_hint": node.get("is_hint", False),
+    })
+
     next_node = node.get("branches", {}).get(branch_type) or node.get("branches", {}).get("default")
 
     if next_node:
@@ -640,15 +655,40 @@ def get_hypothesis(st):
 
 
 def get_teacher_summary(st):
+    """
+    Возвращает:
+    - summary: то, что уже сейчас нужно интерфейсу (числа, hints, visited_nodes)
+    - report_input: полный пакет данных для AI-анализа
+    """
     scores = st.session_state.scores
-    return {
+    answers = st.session_state.answers
+    evidence = st.session_state.evidence
+    visited_nodes = st.session_state.visited_nodes
+    hint_nodes_used = st.session_state.hint_nodes_used
+    answer_evaluations = st.session_state.answer_evaluations
+
+    summary = {
         "security": scores.get("security", 0),
         "rules": scores.get("rules", 0),
         "code": scores.get("code", 0),
         "hypothesis": scores.get("hypothesis", 0),
-        "hint_nodes_used": st.session_state.hint_nodes_used,
-        "visited_nodes": st.session_state.visited_nodes,
+        "hint_nodes_used": hint_nodes_used,
+        "visited_nodes": visited_nodes,
     }
+
+    report_input = {
+        "case_title": st.session_state.case_title,
+        "difficulty": st.session_state.difficulty,
+        "scores": scores,
+        "answers": answers,
+        "evidence_signals": evidence,
+        "visited_nodes": visited_nodes,
+        "hint_nodes_used": hint_nodes_used,
+        "answer_evaluations": answer_evaluations,
+        "final_hypothesis_text": get_hypothesis(st),
+    }
+
+    return summary, report_input
 
 
 def reset_state(st):
@@ -661,3 +701,158 @@ def continue_without_answer(st):
     next_node = node.get("branches", {}).get("default")
     if next_node:
         move_to_node(st, next_node)
+
+def set_ai_teacher_report(st, report: dict):
+    """Сохраняет AI-отчёт в state (на будущее — для вывода и экспорта)."""
+    st.session_state.ai_teacher_report = report
+
+
+def get_ai_teacher_report(st):
+    """Возвращает сохранённый AI-отчёт, если он уже есть."""
+    return st.session_state.get("ai_teacher_report")
+
+def safe_level_from_score(score: int) -> str:
+    if score >= 10:
+        return "высокий"
+    if score >= 6:
+        return "средний"
+    if score >= 3:
+        return "базовый"
+    return "не проявлен"
+
+def generate_ai_teacher_report(report_input: dict) -> dict:
+    api_key = st.secrets.get("OPENROUTER_API_KEY")
+    model_name = st.secrets.get("OPENROUTER_MODEL", "openrouter/free")
+
+    if not api_key:
+        raise ValueError("Не найден OPENROUTER_API_KEY в st.secrets")
+
+    system_prompt = """
+Ты — помощник-аналитик для учителя. 
+Нужно проанализировать прохождение учебной AI-игры учеником и вернуть СТРОГО JSON.
+
+Оцени по двум линиям:
+1) critical_thinking:
+- interpretation
+- analysis
+- inference
+- evaluation
+- explanation
+
+2) subject_knowledge:
+- digital_safety
+- algorithms
+- code
+
+Для каждого критерия и блока:
+- score: 0-3
+- level: "не проявлен", "базовый", "средний", "высокий"
+- comment: 1-2 предложения
+
+Также верни:
+- evidence_quotes: список коротких цитат или кратких фрагментов ответов ученика
+- final_hypothesis_quality: level + comment
+- teacher_recommendation: 2-4 предложения
+
+Важно:
+- опирайся только на данные из report_input
+- не выдумывай факты
+- если данных мало, так и скажи в comments
+- верни только JSON, без markdown и без пояснений вокруг
+"""
+
+    user_prompt = f"""
+Вот данные прохождения игры:
+
+{json.dumps(report_input, ensure_ascii=False, indent=2)}
+
+Верни JSON строго в такой структуре:
+{{
+  "critical_thinking": {{
+    "overall_level": "не проявлен | базовый | средний | высокий",
+    "score": 0,
+    "criteria": {{
+      "interpretation": {{"level": "", "score": 0, "comment": ""}},
+      "analysis": {{"level": "", "score": 0, "comment": ""}},
+      "inference": {{"level": "", "score": 0, "comment": ""}},
+      "evaluation": {{"level": "", "score": 0, "comment": ""}},
+      "explanation": {{"level": "", "score": 0, "comment": ""}}
+    }},
+    "evidence_quotes": []
+  }},
+  "subject_knowledge": {{
+    "overall_level": "не проявлен | базовый | средний | высокий",
+    "score": 0,
+    "areas": {{
+      "digital_safety": {{"level": "", "score": 0, "comment": ""}},
+      "algorithms": {{"level": "", "score": 0, "comment": ""}},
+      "code": {{"level": "", "score": 0, "comment": ""}}
+    }},
+    "evidence_quotes": []
+  }},
+  "final_hypothesis_quality": {{
+    "level": "не проявлен | базовый | средний | высокий",
+    "comment": ""
+  }},
+  "teacher_recommendation": ""
+}}
+"""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://streamlit.app",
+        "X-Title": "AI Detective Teacher Report",
+    }
+
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.2,
+    }
+
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=60,
+    )
+
+    if response.status_code != 200:
+        raise ValueError(f"OpenRouter error {response.status_code}: {response.text}")
+    data = response.json()
+
+    content = data["choices"][0]["message"]["content"].strip()
+
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        return {
+            "critical_thinking": {
+                "overall_level": safe_level_from_score(
+                    report_input.get("scores", {}).get("rules", 0)
+                    + report_input.get("scores", {}).get("hypothesis", 0)
+                ),
+                "score": 0,
+                "criteria": {},
+                "evidence_quotes": report_input.get("evidence_signals", [])[:3],
+            },
+            "subject_knowledge": {
+                "overall_level": safe_level_from_score(
+                    report_input.get("scores", {}).get("security", 0)
+                    + report_input.get("scores", {}).get("rules", 0)
+                    + report_input.get("scores", {}).get("code", 0)
+                ),
+                "score": 0,
+                "areas": {},
+                "evidence_quotes": report_input.get("evidence_signals", [])[3:6],
+            },
+            "final_hypothesis_quality": {
+                "level": safe_level_from_score(report_input.get("scores", {}).get("hypothesis", 0)),
+                "comment": "Модель вернула ответ не в JSON, поэтому показан запасной вариант.",
+            },
+            "teacher_recommendation": "Проверьте ответы ученика вручную: API вернул нестандартный формат.",
+        }
