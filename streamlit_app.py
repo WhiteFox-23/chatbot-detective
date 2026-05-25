@@ -15,6 +15,7 @@ from engine import (
     reset_state,
 )
 
+
 st.set_page_config(
     page_title="AI-детектив",
     page_icon="🕵️",
@@ -38,11 +39,14 @@ current_materials = get_materials(st)
 if "persisted_materials" not in st.session_state:
     st.session_state.persisted_materials = {}
 
+if "last_nonempty_materials" not in st.session_state:
+    st.session_state.last_nonempty_materials = {}
+
 if current_materials:
     st.session_state.persisted_materials[current_node_id] = current_materials
+    st.session_state.last_nonempty_materials = current_materials
 
-materials_to_show = st.session_state.persisted_materials.get(current_node_id, current_materials)
-
+materials_to_show = current_materials or st.session_state.last_nonempty_materials
 
 # =========================
 # HELPERS
@@ -60,9 +64,42 @@ def format_score(value: int) -> str:
 def render_df_table(data, title: str):
     if not data:
         return
-    df = pd.DataFrame(data)
+
     st.markdown(f"#### {title}")
-    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    if isinstance(data, dict):
+        columns = data.get("columns", [])
+        rows = data.get("rows", [])
+        df = pd.DataFrame(rows, columns=columns)
+    else:
+        df = pd.DataFrame(data)
+
+    st.table(df)
+
+
+def render_html_wrap_table(data, title: str):
+    if not data:
+        return
+
+    st.markdown(f"#### {title}")
+
+    if isinstance(data, dict):
+        columns = data.get("columns", [])
+        rows = data.get("rows", [])
+        df = pd.DataFrame(rows, columns=columns)
+    else:
+        df = pd.DataFrame(data)
+
+    html = df.to_html(index=False, escape=False)
+
+    st.markdown(
+        f"""
+        <div class="wrap-table">
+            {html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_materials(materials: dict):
@@ -73,7 +110,40 @@ def render_materials(materials: dict):
     st.caption("Все артефакты, которые доступны на текущем этапе.")
 
     for key, value in materials.items():
-        if key == "messages_and_files":
+
+        # --- новый универсальный формат материалов ---
+        if isinstance(value, dict) and "type" in value:
+            item_type = value.get("type")
+            title = value.get("title", key)
+
+            if item_type == "bullets":
+                st.markdown(f"#### {title}")
+                for item in value.get("items", []):
+                    st.markdown(f"- {item}")
+
+            elif item_type == "table":
+                if key == "suspects_table":
+                    render_html_wrap_table(value, title)
+                else:
+                    render_df_table(value, title)
+
+            elif item_type == "text":
+                st.markdown(f"#### {title}")
+                st.write(value.get("content", ""))
+
+            elif item_type == "code":
+                st.markdown(f"#### {title}")
+                st.code(
+                    value.get("content", ""),
+                    language=value.get("language", "python"),
+                )
+
+            else:
+                st.markdown(f"#### {title}")
+                st.write(value)
+
+        # --- старый / спецформат материалов ---
+        elif key == "messages_and_files":
             st.markdown("#### Сообщения и файлы")
             for item in value:
                 with st.expander(item.get("title", "Материал"), expanded=False):
@@ -86,13 +156,17 @@ def render_materials(materials: dict):
 
         elif key == "rule_description":
             st.markdown("#### Правило работы бота")
-            for item in value:
-                st.markdown(f"- {item}")
+            if isinstance(value, dict):
+                for item in value.get("items", []):
+                    st.markdown(f"- {item}")
+            else:
+                for item in value:
+                    st.markdown(f"- {item}")
 
-        elif key == "journal_05_05":
+        elif key in ["journal_05_05", "journal_0505"]:
             render_df_table(value, "Журнал за 05.05")
 
-        elif key == "journal_06_05":
+        elif key in ["journal_06_05", "journal_0605"]:
             render_df_table(value, "Журнал за 06.05")
 
         elif key == "repo_access":
@@ -109,7 +183,8 @@ def render_materials(materials: dict):
             st.code(value, language="python")
 
         elif key == "suspects_table":
-            render_df_table(value, "Таблица подозреваемых")
+            # fallback, если вдруг придёт в старом формате
+            render_html_wrap_table(value, "Таблица подозреваемых")
 
         else:
             st.markdown(f"#### {key}")
@@ -119,7 +194,8 @@ def render_materials(materials: dict):
 # =========================
 # STYLES
 # =========================
-st.markdown("""
+st.markdown(
+    """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -256,7 +332,6 @@ header[data-testid="stHeader"] {
     justify-content: flex-end;
 }
 
-            
 .msg-vanya {
     background: #edf4ff;
     color: #16253d;
@@ -288,7 +363,6 @@ header[data-testid="stHeader"] {
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
-
 
 .stTextArea textarea {
     border-radius: 16px !important;
@@ -337,14 +411,46 @@ button[kind="secondary"] {
     color: #6b7a8f;
     font-size: 0.92rem;
 }
-</style>
-""", unsafe_allow_html=True)
 
+/* таблицы с переносом строк (подозреваемые и др.) */
+.wrap-table table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: #ffffff;
+    border: 1px solid #dbe4f0;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.wrap-table th,
+.wrap-table td {
+    border: 1px solid #dbe4f0;
+    padding: 10px 12px;
+    vertical-align: top;
+    text-align: left;
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    font-size: 0.93rem;
+    line-height: 1.4;
+}
+
+.wrap-table th {
+    background: #f3f7fd;
+    font-weight: 700;
+    color: #132134;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
 
 # =========================
 # TOP BANNER
 # =========================
-st.markdown("""
+st.markdown(
+    """
 <div class="top-banner">
     <div class="top-kicker">Учебный сценарий · расследование</div>
     <div class="top-title">AI-детектив: дело о странных сообщениях</div>
@@ -353,10 +459,11 @@ st.markdown("""
         как это связано с данными, логами и кодом, и кому в итоге можно доверять.
     </div>
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 left_col, center_col, right_col = st.columns([0.9, 2.7, 1.0], gap="large")
-
 
 # =========================
 # LEFT
@@ -390,19 +497,21 @@ with left_col:
         reset_state(st)
         st.rerun()
 
-
 # =========================
 # CENTER
 # =========================
 with center_col:
     st.markdown('<div class="chat-shell">', unsafe_allow_html=True)
-    st.markdown("""
+    st.markdown(
+        """
     <div class="chat-header">
         <div class="chat-title">Диалог с Ваней</div>
         <div class="chat-subtitle">Следи за сообщениями, смотри материалы и отвечай как участник расследования.</div>
         <div class="chat-stage">Центральная линия расследования</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     chat_history_box = st.container(height=500)
     with chat_history_box:
@@ -419,7 +528,7 @@ with center_col:
                         </div>
                     </div>
                     """,
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
             else:
                 st.markdown(
@@ -431,10 +540,10 @@ with center_col:
                         </div>
                     </div>
                     """,
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     if materials_to_show:
         render_materials(materials_to_show)
@@ -448,13 +557,17 @@ with center_col:
                 "Напиши ответ",
                 key=answer_key,
                 height=140,
-                placeholder="Напиши здесь свой ответ..."
+                placeholder="Напиши здесь свой ответ...",
             )
 
             btn_col1, btn_col2 = st.columns([1, 1])
 
             with btn_col1:
-                if st.button("Отправить ответ", type="primary", use_container_width=True):
+                if st.button(
+                    "Отправить ответ",
+                    type="primary",
+                    use_container_width=True,
+                ):
                     answer = user_answer.strip()
                     if answer:
                         submit_answer(st, answer)
@@ -467,18 +580,25 @@ with center_col:
 
         else:
             st.success("Этот этап не требует ответа.")
-            if st.button("Продолжить", type="primary", use_container_width=True):
+            if st.button(
+                "Продолжить",
+                type="primary",
+                use_container_width=True,
+            ):
                 continue_without_answer(st)
                 st.rerun()
 
     else:
         st.success("Расследование завершено.")
-        if st.button("Пройти кейс заново", type="primary", use_container_width=True):
+        if st.button(
+            "Пройти кейс заново",
+            type="primary",
+            use_container_width=True,
+        ):
             reset_state(st)
             st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)
-
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
 # RIGHT
