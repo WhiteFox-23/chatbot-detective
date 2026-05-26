@@ -828,23 +828,23 @@ with center_col:
 
         # Кнопка для формирования AI-отчёта
     if is_finished(st):
-    if st.button(
-        "Сформировать AI-анализ прохождения",
-        type="primary",
-        use_container_width=True,
-    ):
-        try:
-            report = generate_ai_teacher_report(report_input)
-            set_ai_teacher_report(st, report)
+        if st.button(
+            "Сформировать AI-анализ прохождения",
+            type="primary",
+            use_container_width=True,
+        ):
+            try:
+                report = generate_ai_teacher_report(report_input)
+                set_ai_teacher_report(st, report)
 
-            if not st.session_state.get("run_summary_saved", False):
-                save_run_summary(st)
-                st.session_state.run_summary_saved = True
+                if not st.session_state.get("run_summary_saved", False):
+                    save_run_summary(st)
+                    st.session_state.run_summary_saved = True
 
-            st.success("AI-анализ сформирован.")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Не удалось получить AI-анализ: {e}")
+                st.success("AI-анализ сформирован.")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Не удалось получить AI-анализ: {e}")
 
     if st.button(
         "Пройти кейс заново",
