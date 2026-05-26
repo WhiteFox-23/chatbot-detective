@@ -2,6 +2,10 @@ from scenario_data import SCENARIO
 import json
 import requests
 import streamlit as st
+import csv
+import uuid
+from datetime import datetime
+from pathlib import Path
 
 
 BASE_SCORES = {
@@ -15,6 +19,7 @@ BASE_SCORES = {
 def init_state(st):
     defaults = {
         "current_node": "intro_intro",
+        "session_id": str(uuid.uuid4()),
         "history": [],
         "answers": {},
         "evidence": [],
@@ -27,6 +32,7 @@ def init_state(st):
         "current_materials": {},
         "materials_by_node": {},
         "answer_evaluations": [],
+        "run_summary_saved": False,
         "ai_teacher_report": None,
     }
     for key, value in defaults.items():
@@ -68,6 +74,7 @@ def start_scenario(st):
         push_node_messages(st, node_id)
         _register_visited_node(st, node_id)
         st.session_state.started = True
+        log_event(st, "start")
 
 
 def get_current_node(st):
@@ -618,6 +625,18 @@ def submit_answer(st, answer: str):
 
     next_node = node.get("branches", {}).get(branch_type) or node.get("branches", {}).get("default")
 
+    log_event(
+    st,
+    "answer_submitted",
+    {
+        "question": node.get("question", ""),
+        "student_answer": clean_answer,
+        "classification": branch_type,
+        "next_node": next_node or "",
+        "is_hint": node.get("is_hint", False),
+    },
+)
+
     if next_node:
         move_to_node(st, next_node)
 
@@ -700,7 +719,119 @@ def continue_without_answer(st):
     node = get_current_node(st)
     next_node = node.get("branches", {}).get("default")
     if next_node:
+        log_event(
+            st,
+            "continue_without_answer",
+            {
+                "question": node.get("question", ""),
+                "next_node": next_node or "",
+                "is_hint": node.get("is_hint", False),
+            },
+        )
         move_to_node(st, next_node)
+
+
+DATA_DIR = Path("data")
+EVENTS_FILE = DATA_DIR / "events_log.csv"
+RUNS_FILE = DATA_DIR / "runs_summary.csv"
+
+
+def ensure_data_dir():
+    DATA_DIR.mkdir(exist_ok=True)
+
+
+def append_csv_row(file_path: Path, fieldnames: list, row: dict):
+    ensure_data_dir()
+    file_exists = file_path.exists()
+
+    with open(file_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(row)
+
+
+def log_event(st, event_type: str, extra: dict | None = None):
+    extra = extra or {}
+    fieldnames = [
+        "timestamp",
+        "session_id",
+        "case_title",
+        "current_node",
+        "event_type",
+        "question",
+        "student_answer",
+        "classification",
+        "next_node",
+        "is_hint",
+        "security_score",
+        "rules_score",
+        "code_score",
+        "hypothesis_score",
+    ]
+
+    row = {
+        "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
+        "session_id": st.session_state.get("session_id"),
+        "case_title": st.session_state.get("case_title"),
+        "current_node": st.session_state.get("current_node"),
+        "event_type": event_type,
+        "question": extra.get("question", ""),
+        "student_answer": extra.get("student_answer", ""),
+        "classification": extra.get("classification", ""),
+        "next_node": extra.get("next_node", ""),
+        "is_hint": extra.get("is_hint", False),
+        "security_score": st.session_state.get("scores", {}).get("security", 0),
+        "rules_score": st.session_state.get("scores", {}).get("rules", 0),
+        "code_score": st.session_state.get("scores", {}).get("code", 0),
+        "hypothesis_score": st.session_state.get("scores", {}).get("hypothesis", 0),
+    }
+
+    append_csv_row(EVENTS_FILE, fieldnames, row)
+
+def save_run_summary(st):
+    ai_report = st.session_state.get("ai_teacher_report") or {}
+
+    ct = ai_report.get("critical_thinking", {}) or {}
+    subj = ai_report.get("subject_knowledge", {}) or {}
+
+    fieldnames = [
+        "timestamp",
+        "session_id",
+        "case_title",
+        "difficulty",
+        "visited_nodes_count",
+        "hint_count",
+        "final_hypothesis",
+        "security_score",
+        "rules_score",
+        "code_score",
+        "hypothesis_score",
+        "critical_thinking_level",
+        "critical_thinking_score",
+        "subject_knowledge_level",
+        "subject_knowledge_score",
+    ]
+
+    row = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "session_id": st.session_state.get("session_id"),
+        "case_title": st.session_state.get("case_title"),
+        "difficulty": st.session_state.get("difficulty"),
+        "visited_nodes_count": len(st.session_state.get("visited_nodes", [])),
+        "hint_count": len(st.session_state.get("hint_nodes_used", [])),
+        "final_hypothesis": get_hypothesis(st),
+        "security_score": st.session_state.get("scores", {}).get("security", 0),
+        "rules_score": st.session_state.get("scores", {}).get("rules", 0),
+        "code_score": st.session_state.get("scores", {}).get("code", 0),
+        "hypothesis_score": st.session_state.get("scores", {}).get("hypothesis", 0),
+        "critical_thinking_level": ct.get("overall_level", ""),
+        "critical_thinking_score": ct.get("score", 0),
+        "subject_knowledge_level": subj.get("overall_level", ""),
+        "subject_knowledge_score": subj.get("score", 0),
+    }
+
+    append_csv_row(RUNS_FILE, fieldnames, row)
 
 def set_ai_teacher_report(st, report: dict):
     """Сохраняет AI-отчёт в state (на будущее — для вывода и экспорта)."""

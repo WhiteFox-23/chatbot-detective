@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 
+from pathlib import Path
+
 from engine import (
     init_state,
     start_scenario,
@@ -15,6 +17,7 @@ from engine import (
     reset_state,
     get_ai_teacher_report,
     set_ai_teacher_report,
+    save_run_summary,
     generate_ai_teacher_report,
 )
 
@@ -122,12 +125,12 @@ def render_ai_report(report: dict):
         {
             "title": "Критическое мышление",
             "level": ct.get("overall_level", "—"),
-            "meta": f"Балл: {ct.get('score', 0)}",
+            "meta": f"Балл: {ct.get('score', 0)}/15",
         },
         {
             "title": "Предметные знания",
             "level": subj.get("overall_level", "—"),
-            "meta": f"Балл: {subj.get('score', 0)}",
+            "meta": f"Балл: {subj.get('score', 0)}/9",
         },
         {
             "title": "Итоговая гипотеза",
@@ -162,7 +165,7 @@ def render_ai_report(report: dict):
                         <div class="ai-detail-title">{pretty_label(name)}</div>
                         <div>{level_badge(level)}</div>
                     </div>
-                    <div class="ai-detail-score">Балл: {score}</div>
+                    <div class="ai-detail-score">Балл: {score}/3</div>
                     <div class="ai-detail-comment">{comment}</div>
                 </div>
                 """,
@@ -183,7 +186,7 @@ def render_ai_report(report: dict):
                         <div class="ai-detail-title">{pretty_label(name)}</div>
                         <div>{level_badge(level)}</div>
                     </div>
-                    <div class="ai-detail-score">Балл: {score}</div>
+                    <div class="ai-detail-score">Балл: {score}/3</div>
                     <div class="ai-detail-comment">{comment}</div>
                 </div>
                 """,
@@ -824,6 +827,7 @@ with center_col:
         st.success("Расследование завершено.")
 
         # Кнопка для формирования AI-отчёта
+    if is_finished(st):
     if st.button(
         "Сформировать AI-анализ прохождения",
         type="primary",
@@ -832,17 +836,22 @@ with center_col:
         try:
             report = generate_ai_teacher_report(report_input)
             set_ai_teacher_report(st, report)
+
+            if not st.session_state.get("run_summary_saved", False):
+                save_run_summary(st)
+                st.session_state.run_summary_saved = True
+
             st.success("AI-анализ сформирован.")
             st.rerun()
         except Exception as e:
             st.error(f"Не удалось получить AI-анализ: {e}")
 
-        if st.button(
-            "Пройти кейс заново",
-            use_container_width=True,
-        ):
-            reset_state(st)
-            st.rerun()
+    if st.button(
+        "Пройти кейс заново",
+        use_container_width=True,
+    ):
+        reset_state(st)
+        st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -871,3 +880,24 @@ with right_col:
     st.markdown("#### AI-анализ")
     st.caption("Автоматический отчёт по ответам ученика и ходу расследования.")
     render_ai_report(ai_report)
+
+    events_path = Path("data/events_log.csv")
+    runs_path = Path("data/runs_summary.csv")
+
+    if events_path.exists():
+        with open(events_path, "rb") as f:
+            st.download_button(
+                "Скачать events CSV",
+                data=f,
+                file_name="events_log.csv",
+                mime="text/csv",
+            )
+
+    if runs_path.exists():
+        with open(runs_path, "rb") as f:
+            st.download_button(
+                "Скачать summary CSV",
+                data=f,
+                file_name="runs_summary.csv",
+                mime="text/csv",
+            )
