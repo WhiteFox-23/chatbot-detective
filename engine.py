@@ -789,6 +789,7 @@ def log_event(st, event_type: str, extra: dict | None = None):
 
     append_csv_row(EVENTS_FILE, fieldnames, row)
 
+
 def save_run_summary(st):
     ai_report = st.session_state.get("ai_teacher_report") or {}
 
@@ -814,7 +815,7 @@ def save_run_summary(st):
     ]
 
     row = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
         "session_id": st.session_state.get("session_id"),
         "case_title": st.session_state.get("case_title"),
         "difficulty": st.session_state.get("difficulty"),
@@ -833,14 +834,14 @@ def save_run_summary(st):
 
     append_csv_row(RUNS_FILE, fieldnames, row)
 
+
 def set_ai_teacher_report(st, report: dict):
-    """Сохраняет AI-отчёт в state (на будущее — для вывода и экспорта)."""
     st.session_state.ai_teacher_report = report
 
 
 def get_ai_teacher_report(st):
-    """Возвращает сохранённый AI-отчёт, если он уже есть."""
     return st.session_state.get("ai_teacher_report")
+
 
 def safe_level_from_score(score: int) -> str:
     if score >= 10:
@@ -851,6 +852,7 @@ def safe_level_from_score(score: int) -> str:
         return "базовый"
     return "не проявлен"
 
+
 def generate_ai_teacher_report(report_input: dict) -> dict:
     api_key = st.secrets.get("OPENROUTER_API_KEY")
     model_name = st.secrets.get("OPENROUTER_MODEL", "openrouter/free")
@@ -859,7 +861,7 @@ def generate_ai_teacher_report(report_input: dict) -> dict:
         raise ValueError("Не найден OPENROUTER_API_KEY в st.secrets")
 
     system_prompt = """
-Ты — помощник-аналитик для учителя. 
+Ты — помощник-аналитик для учителя.
 Нужно проанализировать прохождение учебной AI-игры учеником и вернуть СТРОГО JSON.
 
 Оцени по двум линиям:
@@ -954,8 +956,8 @@ def generate_ai_teacher_report(report_input: dict) -> dict:
 
     if response.status_code != 200:
         raise ValueError(f"OpenRouter error {response.status_code}: {response.text}")
-    data = response.json()
 
+    data = response.json()
     content = data["choices"][0]["message"]["content"].strip()
 
     try:
@@ -982,7 +984,9 @@ def generate_ai_teacher_report(report_input: dict) -> dict:
                 "evidence_quotes": report_input.get("evidence_signals", [])[3:6],
             },
             "final_hypothesis_quality": {
-                "level": safe_level_from_score(report_input.get("scores", {}).get("hypothesis", 0)),
+                "level": safe_level_from_score(
+                    report_input.get("scores", {}).get("hypothesis", 0)
+                ),
                 "comment": "Модель вернула ответ не в JSON, поэтому показан запасной вариант.",
             },
             "teacher_recommendation": "Проверьте ответы ученика вручную: API вернул нестандартный формат.",
