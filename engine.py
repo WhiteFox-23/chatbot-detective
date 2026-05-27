@@ -92,6 +92,12 @@ def get_materials(st):
         return node_materials
     return st.session_state.materials_by_node.get(node_id, st.session_state.current_materials)
 
+def get_hint_materials(node_id: str) -> list:
+    """Возвращает список дневников детектива для данного узла."""
+    from scenario_data import DETECTIVE_DIARIES
+    node = SCENARIO.get(node_id, {})
+    diary_keys = node.get("hint_materials", [])
+    return [DETECTIVE_DIARIES[k] for k in diary_keys if k in DETECTIVE_DIARIES]
 
 def is_finished(st):
     node = get_current_node(st)

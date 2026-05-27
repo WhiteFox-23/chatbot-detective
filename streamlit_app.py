@@ -8,7 +8,8 @@ from engine import (
     init_state, start_scenario, submit_answer, get_question,
     get_progress, get_hypothesis, get_teacher_summary, get_materials,
     continue_without_answer, is_finished, reset_state, get_ai_teacher_report,
-    set_ai_teacher_report, save_run_summary, generate_ai_teacher_report,
+    set_ai_teacher_report, save_run_summary, generate_ai_teacher_report, 
+    get_hint_materials,
 )
 
 st.set_page_config(page_title="AI-детектив", page_icon="🕵️", layout="wide")
@@ -27,10 +28,14 @@ current_materials = get_materials(st)
 for k in ("persisted_materials", "last_nonempty_materials"):
     if k not in st.session_state:
         st.session_state[k] = {}
+
 if current_materials:
     st.session_state.persisted_materials[current_node_id] = current_materials
     st.session_state.last_nonempty_materials = current_materials
+
+current_diaries   = get_hint_materials(current_node_id)
 materials_to_show = current_materials or st.session_state.last_nonempty_materials
+
 
 # ── ASSETS ──────────────────────────────────────────────────────────
 def img_b64(path_str):
@@ -224,6 +229,33 @@ def render_materials(materials):
         elif key == "suspects_table": render_html_wrap_table(value,"Таблица подозреваемых")
         else: st.markdown(f"#### {key}"); st.write(value)
 
+def render_detective_diary(diary):
+    title = diary.get("title", "Дневник детектива")
+    subtitle = diary.get("subtitle", "")
+    with st.expander(f"📓 {title} · {subtitle}", expanded=True):
+        for para in diary.get("content", []):
+            st.markdown(para)
+        steps = diary.get("steps", [])
+        if steps:
+            st.markdown("**Алгоритм:**")
+            for i, step in enumerate(steps, 1):
+                st.markdown(f"{i}. {step}")
+        checklist = diary.get("checklist", [])
+        if checklist:
+            for item in checklist:
+                q = item.get("question", "")
+                yes_lbl = item.get("yes_label", "Да")
+                no_lbl = item.get("no_label", "Нет")
+                st.markdown(f"**{q}**  \n✓ {yes_lbl}: {item.get('yes','')}  \n✗ {no_lbl}: {item.get('no','')}")
+        example = diary.get("example")
+        if example:
+            st.markdown(f"*{example['question']}*")
+            st.markdown(f"Слабо: {example['weak']}")
+            st.markdown(f"Сильно: {example['strong']}")
+        footer = diary.get("footer")
+        if footer:
+            st.markdown(f"*{footer}*")
+
 # ── CSS ───────────────────────────────────────────────────────────────
 # ВАЖНО: весь CSS — одна строка-литерал (не f-string),
 # поэтому { } внутри CSS не нужно удваивать.
@@ -304,6 +336,9 @@ details > summary svg { display:none!important; }
 details > summary::marker { content:""!important; display:none!important; }
 details > summary::-webkit-details-marker { display:none!important; }
 [data-testid="stExpanderToggleIcon"] { display:none!important; }
+[data-testid="stExpander"] summary span[data-testid="stExpanderToggleIcon"],
+[data-testid="stExpander"] summary [class*="arrow"],
+[data-testid="stExpander"] summary [class*="Arrow"] { display:none!important; }
 [data-testid="stExpander"] {
     border:1px solid #DDD0C2!important; border-radius:10px!important;
     background:#FAF6EE!important; margin-bottom:5px!important;
@@ -506,7 +541,11 @@ if active_view == "chat":
             unsafe_allow_html=True)
         st.markdown('<div class="panel-divider"></div>', unsafe_allow_html=True)
         st.markdown('<div class="panel-section-title">Текущие материалы дела</div>', unsafe_allow_html=True)
-        if materials_to_show:
+        if current_diaries:
+            with st.container(height=260):
+                for diary in current_diaries:
+                    render_detective_diary(diary)
+        elif materials_to_show:
             with st.container(height=260):
                 render_materials(materials_to_show)
         else:
