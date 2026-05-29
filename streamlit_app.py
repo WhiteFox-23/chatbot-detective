@@ -189,7 +189,6 @@ def render_html_wrap_table(data, title):
     if not data: return
     st.markdown(f"#### {title}")
     
-    # Если список словарей — конвертируем
     if isinstance(data, list):
         df = pd.DataFrame(data)
     elif isinstance(data, dict):
@@ -197,8 +196,17 @@ def render_html_wrap_table(data, title):
     else:
         return
     
-    st.markdown(f'<div class="wrap-table">{df.to_html(index=False, escape=False)}</div>', unsafe_allow_html=True)
-
+    html = df.to_html(index=False, escape=False)
+    st.markdown(f'''
+    <div style="overflow-x:auto;">
+        <style>
+        .inline-table {{ border-collapse:collapse; width:100%; font-size:.79rem; }}
+        .inline-table th {{ background:#EEE4D5!important; padding:6px 9px; text-align:left; border:1px solid #D6C8B4; font-weight:600; color:#2f241b!important; }}
+        .inline-table td {{ padding:6px 9px; border:1px solid #E4DDD3; color:#2f241b!important; background:#FAF6EE!important; }}
+        </style>
+        {html.replace("<table", '<table class="inline-table"')}
+    </div>
+    ''', unsafe_allow_html=True)
 
 def render_materials(materials):
     if not materials: return
