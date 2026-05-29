@@ -256,6 +256,7 @@ def render_materials(materials):
             items = value.get("items", value) if isinstance(value, dict) else value
             for item in items: st.markdown(f"- {item}")
         elif key in ["journal_05_05","journal_0505"]: 
+            st.write(f"DEBUG 0505 type: {type(value)}")
             render_html_wrap_table(value,"Журнал за 05.05")
         elif key in ["journal_06_05","journal_0605"]: 
             render_html_wrap_table(value,"Журнал за 06.05")
