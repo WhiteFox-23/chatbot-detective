@@ -331,14 +331,17 @@ NAV_CSS = """
 
 EXPANDER_CSS = """
 /* ── EXPANDER — скрываем стрелку ── */
-[data-testid="stExpander"] summary svg { display:none!important; }
-details > summary svg { display:none!important; }
-details > summary::marker { content:""!important; display:none!important; }
+[data-testid="stExpander"] summary svg { 
+    display:none!important; 
+    visibility:hidden!important;
+    width:0!important; 
+    height:0!important;
+    position:absolute!important;
+}
+details > summary { list-style:none!important; }
 details > summary::-webkit-details-marker { display:none!important; }
-[data-testid="stExpanderToggleIcon"] { display:none!important; }
-[data-testid="stExpander"] summary span[data-testid="stExpanderToggleIcon"],
-[data-testid="stExpander"] summary [class*="arrow"],
-[data-testid="stExpander"] summary [class*="Arrow"] { display:none!important; }
+summary::marker { display:none!important; }
+
 [data-testid="stExpander"] {
     border:1px solid #DDD0C2!important; border-radius:10px!important;
     background:#FAF6EE!important; margin-bottom:5px!important;
@@ -540,6 +543,13 @@ if active_view == "chat":
             f'<div class="hypothesis-text">{get_hypothesis(st)}</div>',
             unsafe_allow_html=True)
         st.markdown('<div class="panel-divider"></div>', unsafe_allow_html=True)
+
+        # ✅ ИНСТРУКЦИЯ — теперь СВЕРХУ, перед материалами
+        st.markdown('<div class="panel-section-title">Инструкция</div>', unsafe_allow_html=True)
+        st.write(current_question if current_question else "На этом шаге отдельного ответа не требуется.")
+        st.markdown('<div class="panel-divider"></div>', unsafe_allow_html=True)
+
+        # Материалы дела — теперь НИЖЕ
         st.markdown('<div class="panel-section-title">Текущие материалы дела</div>', unsafe_allow_html=True)
         if current_diaries:
             with st.container(height=260):
@@ -550,9 +560,6 @@ if active_view == "chat":
                 render_materials(materials_to_show)
         else:
             st.markdown('<div style="font-size:.82rem;color:#9a8878;font-style:italic;">Улики появятся здесь по мере расследования…</div>', unsafe_allow_html=True)
-        st.markdown('<div class="panel-divider"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="panel-section-title">Инструкция</div>', unsafe_allow_html=True)
-        st.write(current_question if current_question else "На этом шаге отдельного ответа не требуется.")
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ── MATERIALS ─────────────────────────────────────────────────────────
