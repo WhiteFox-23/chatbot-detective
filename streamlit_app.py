@@ -403,8 +403,8 @@ summary::marker { display:none!important; }
 """
 
 CONTAINER_CSS = """
-.st-key-materials_box > div,
-.st-key-materials_log_box > div {
+.st-key-materials_box > div > div,
+.st-key-materials_log_box > div > div {
     overflow-y: auto !important;
     overflow-anchor: none !important;
     resize: vertical !important;
@@ -415,13 +415,13 @@ CONTAINER_CSS = """
     padding: 10px 12px !important;
     background: rgba(250,246,238,0.6) !important;
 }
-.st-key-materials_log_box > div {
+.st-key-materials_log_box > div > div {
     max-height: 540px !important;
 }
-.st-key-materials_box > div::-webkit-scrollbar,
-.st-key-materials_log_box > div::-webkit-scrollbar { width: 5px; }
-.st-key-materials_box > div::-webkit-scrollbar-thumb,
-.st-key-materials_log_box > div::-webkit-scrollbar-thumb { 
+.st-key-materials_box > div > div::-webkit-scrollbar,
+.st-key-materials_log_box > div > div::-webkit-scrollbar { width: 5px; }
+.st-key-materials_box > div > div::-webkit-scrollbar-thumb,
+.st-key-materials_log_box > div > div::-webkit-scrollbar-thumb { 
     background: rgba(180,155,125,.4); border-radius: 10px; 
 }
 """
