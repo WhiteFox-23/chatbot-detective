@@ -247,8 +247,6 @@ def render_materials(materials):
         elif key == "code_snippet":   st.markdown("#### Фрагмент кода");  st.code(value, language="python")
         elif key == "suspects_table": 
             render_html_wrap_table(value, "Таблица подозреваемых")
-        elif key == "suspects_table_updated": 
-            render_html_wrap_table(value, "Таблица подозреваемых (обновлено)")
         else: st.markdown(f"#### {key}"); st.write(value)
 
 def md_to_html(text: str) -> str:
