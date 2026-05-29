@@ -188,9 +188,18 @@ def render_df_table(data, title):
 def render_html_wrap_table(data, title):
     if not data: return
     st.markdown(f"#### {title}")
-    df = pd.DataFrame(data.get("rows",[]), columns=data.get("columns",[])) if isinstance(data,dict) else pd.DataFrame(data)
-    st.markdown(f'<div class="wrap-table">{df.to_html(index=False,escape=False)}</div>', unsafe_allow_html=True)
+    
+    # Если список словарей — конвертируем
+    if isinstance(data, list):
+        df = pd.DataFrame(data)
+    elif isinstance(data, dict):
+        df = pd.DataFrame(data.get("rows", []), columns=data.get("columns", []))
+    else:
+        return
+    
+    st.markdown(f'<div class="wrap-table">{df.to_html(index=False, escape=False)}</div>', unsafe_allow_html=True)
 
+    
 def render_materials(materials):
     if not materials: return
     for key, value in materials.items():
