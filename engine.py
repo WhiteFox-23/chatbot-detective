@@ -1017,7 +1017,44 @@ def generate_ai_teacher_report(report_input: dict) -> dict:
                 v.get("score", 0) for v in subj_areas.values()
             )
 
-        final_hyp = report_input.get("final_hypothesis_text", "")
+        # После пересчёта score добавь пересчёт level:
+        def score_to_level(s):
+            if s >= 3: return "высокий"
+            if s == 2: return "средний"
+            if s == 1: return "базовый"
+            return "не проявлен"
+
+        # Пересчёт level для критериев КМ
+        for v in ct_criteria.values():
+            v["level"] = score_to_level(v.get("score", 0))
+
+        # Пересчёт level для областей предметных знаний
+        for v in subj_areas.values():
+            v["level"] = score_to_level(v.get("score", 0))
+
+        # Пересчёт overall_level
+        ct_score = result["critical_thinking"]["score"]
+        result["critical_thinking"]["overall_level"] = (
+            "высокий" if ct_score >= 12 else
+            "средний" if ct_score >= 7 else
+            "базовый" if ct_score >= 3 else
+            "не проявлен"
+        )
+
+        subj_score = result["subject_knowledge"]["score"]
+        result["subject_knowledge"]["overall_level"] = (
+            "высокий" if subj_score >= 8 else
+            "средний" if subj_score >= 5 else
+            "базовый" if subj_score >= 2 else
+            "не проявлен"
+        )
+
+        final_hyp = (
+            report_input.get("answers", {}).get("final_needs_argument")  # развёрнутая вторая
+            or report_input.get("answers", {}).get("final_suspect")        # первая финальная
+            or report_input.get("final_hypothesis_text", "")               # fallback
+        )
+
         if final_hyp and "Гипотеза ещё не сформирована" not in final_hyp:
             ct = result.get("critical_thinking", {})
             quotes = ct.get("evidence_quotes", [])
