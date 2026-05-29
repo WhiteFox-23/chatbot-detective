@@ -402,6 +402,14 @@ summary::marker { display:none!important; }
 }
 """
 
+CONTAINER_CSS = """
+/* Ресайз контейнера материалов */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    resize: vertical !important;
+    overflow: hidden !important;
+    min-height: 100px !important;
+}
+"""
 
 # f-string только для переменных Python (цвета текстур), всё остальное — литерал
 st.markdown(f"""<style>
@@ -504,7 +512,7 @@ section[data-testid="stSidebar"] {{ display:none!important; }}
 </style>""", unsafe_allow_html=True)
 
 # NAV_CSS и EXPANDER_CSS — обычные строки (не f-string), { } не нужно удваивать
-st.markdown(f"<style>{NAV_CSS}{EXPANDER_CSS}</style>", unsafe_allow_html=True)
+st.markdown(f"<style>{NAV_CSS}{EXPANDER_CSS}{CONTAINER_CSS}</style>", unsafe_allow_html=True)
 
 # ── LAYOUT ───────────────────────────────────────────────────────────
 left_col, center_col, right_col = st.columns([0.68, 2.1, 1.3], gap="large")
