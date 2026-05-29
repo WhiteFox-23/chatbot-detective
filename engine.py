@@ -6,6 +6,7 @@ import csv
 import uuid
 from datetime import datetime
 from pathlib import Path
+import re
 
 
 BASE_SCORES = {
