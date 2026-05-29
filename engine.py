@@ -663,7 +663,8 @@ def submit_answer(st, answer: str):
 def get_progress(st):
     learning_nodes = [
         node_id for node_id, node in SCENARIO.items()
-        if node.get("question") is not None
+        if node.get("question") is not None  # убеждаемся что question не None
+        and node.get("node_type") == "task"  # только задания, не материалы
     ]
     visited_learning = [n for n in st.session_state.visited_nodes if n in learning_nodes]
 
@@ -671,6 +672,8 @@ def get_progress(st):
     visited = len(visited_learning)
     if total == 0:
         return 0
+    if is_finished(st):
+        return 100
     return int((visited / total) * 100)
 
 
