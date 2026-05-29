@@ -199,10 +199,11 @@ def render_html_wrap_table(data, title):
     
     st.markdown(f'<div class="wrap-table">{df.to_html(index=False, escape=False)}</div>', unsafe_allow_html=True)
 
-    
+
 def render_materials(materials):
     if not materials: return
     for key, value in materials.items():
+        st.write(f"DEBUG key: {key}")
         if isinstance(value, dict) and "type" in value:
             t     = value.get("type")
             title = value.get("title", key)
