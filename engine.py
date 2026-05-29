@@ -1003,7 +1003,31 @@ def generate_ai_teacher_report(report_input: dict) -> dict:
         if "```" in clean:
             clean = re.sub(r"```(?:json)?\s*", "", clean).strip()
             clean = clean.rstrip("`").strip()
-        return json.loads(clean)
+        result = json.loads(clean)  # ← было return, должно быть result =
+
+        ct_criteria = result.get("critical_thinking", {}).get("criteria", {})
+        if ct_criteria:
+            result["critical_thinking"]["score"] = sum(
+                v.get("score", 0) for v in ct_criteria.values()
+            )
+
+        subj_areas = result.get("subject_knowledge", {}).get("areas", {})
+        if subj_areas:
+            result["subject_knowledge"]["score"] = sum(
+                v.get("score", 0) for v in subj_areas.values()
+            )
+
+        final_hyp = report_input.get("final_hypothesis_text", "")
+        if final_hyp and "Гипотеза ещё не сформирована" not in final_hyp:
+            ct = result.get("critical_thinking", {})
+            quotes = ct.get("evidence_quotes", [])
+            hyp_quote = f"[Итоговая гипотеза] {final_hyp}"
+            if hyp_quote not in quotes:
+                quotes.insert(0, hyp_quote)
+            ct["evidence_quotes"] = quotes
+
+        return result
+
     except json.JSONDecodeError:
         return {
             "critical_thinking": {
