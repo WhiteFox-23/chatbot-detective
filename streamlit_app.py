@@ -403,22 +403,25 @@ summary::marker { display:none!important; }
 """
 
 CONTAINER_CSS = """
-.materials-scroll-box {
-    height: 260px;
+.st-key-materials_box > div,
+.st-key-materials_log_box > div {
     overflow-y: auto !important;
     overflow-anchor: none !important;
     resize: vertical !important;
     min-height: 100px !important;
-    border: 1px solid #DDD0C2;
-    border-radius: 10px;
-    padding: 10px 12px;
-    background: rgba(250,246,238,0.6);
+    max-height: 260px;
+    border: 1px solid #DDD0C2 !important;
+    border-radius: 10px !important;
+    padding: 10px 12px !important;
+    background: rgba(250,246,238,0.6) !important;
 }
-.materials-scroll-box--tall {
-    height: 540px;
+.st-key-materials_log_box > div {
+    max-height: 540px !important;
 }
-.materials-scroll-box::-webkit-scrollbar { width: 5px; }
-.materials-scroll-box::-webkit-scrollbar-thumb { 
+.st-key-materials_box > div::-webkit-scrollbar,
+.st-key-materials_log_box > div::-webkit-scrollbar { width: 5px; }
+.st-key-materials_box > div::-webkit-scrollbar-thumb,
+.st-key-materials_log_box > div::-webkit-scrollbar-thumb { 
     background: rgba(180,155,125,.4); border-radius: 10px; 
 }
 """
@@ -618,15 +621,15 @@ if active_view == "chat":
 
         # Материалы дела — теперь НИЖЕ
         st.markdown('<div class="panel-section-title">Текущие материалы дела</div>', unsafe_allow_html=True)
-        st.markdown('<div class="materials-scroll-box">', unsafe_allow_html=True)
-        if current_diaries:
-            for diary in current_diaries:
-                render_detective_diary(diary)
-        elif materials_to_show:
-            render_materials(materials_to_show)
-        else:
-            st.markdown('<div style="font-size:.82rem;color:#9a8878;font-style:italic;">Улики появятся здесь по мере расследования…</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(key="materials_box"):
+            if current_diaries:
+                for diary in current_diaries:
+                    render_detective_diary(diary)
+            elif materials_to_show:
+                render_materials(materials_to_show)
+            else:
+                st.markdown('<div style="font-size:.82rem;color:#9a8878;font-style:italic;">Улики появятся здесь по мере расследования…</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # ── MATERIALS ─────────────────────────────────────────────────────────
 elif active_view == "materials":
@@ -638,18 +641,17 @@ elif active_view == "materials":
             'Здесь собраны все материалы по мере их появления в кейсе — улики, таблицы, фрагменты кода.'
             '</div>',
             unsafe_allow_html=True)
-        st.markdown('<div class="materials-scroll-box materials-scroll-box--tall">', unsafe_allow_html=True)
-        if st.session_state.all_materials_log:
-            for entry in st.session_state.all_materials_log:
-                st.markdown(
-                    f'<div class="material-log-node">'
-                    f'<div class="material-log-title">Этап: {entry["node"]}</div>',
-                    unsafe_allow_html=True)
-                render_materials(entry["materials"])
-                st.markdown("</div>", unsafe_allow_html=True)
-        else:
-            st.write("Материалы пока не накоплены.")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(key="materials_log_box"):
+            if st.session_state.all_materials_log:
+                for entry in st.session_state.all_materials_log:
+                    st.markdown(
+                        f'<div class="material-log-node">'
+                        f'<div class="material-log-title">Этап: {entry["node"]}</div>',
+                        unsafe_allow_html=True)
+                    render_materials(entry["materials"])
+                    st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.write("Материалы пока не накоплены.")
 
 # ── ANALYSIS ──────────────────────────────────────────────────────────
 elif active_view == "analysis":
