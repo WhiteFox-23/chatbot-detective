@@ -250,47 +250,49 @@ def render_detective_diary(diary):
     title = diary.get("title", "Дневник детектива")
     subtitle = diary.get("subtitle", "")
     
-    st.markdown(
+    # Собираем весь контент в HTML
+    html = (
         f'<div style="background:#fff;border:1px solid #DDD0C2;border-radius:10px;'
-        f'padding:12px 16px;margin-bottom:5px;">'
-        f'<div style="font-size:.85rem;font-weight:600;color:#33271e;margin-bottom:8px;">'
-        f'📓 {title} · {subtitle}</div>',
-        unsafe_allow_html=True)
+        f'padding:12px 16px;margin-bottom:5px;font-size:.85rem;color:#33271e;">'
+        f'<div style="font-weight:600;margin-bottom:8px;">📓 {title} · {subtitle}</div>'
+    )
     
-    with st.container():
-        st.markdown("""
-        <style>
-        [data-testid="stVerticalBlockBorderWrapper"] > div {
-            background: #fff !important;
-            border-radius: 0 0 10px 10px !important;
-            padding: 0 4px !important;
-        }
-        </style>""", unsafe_allow_html=True)
-        
-        for para in diary.get("content", []):
-            st.markdown(para)
-        steps = diary.get("steps", [])
-        if steps:
-            st.markdown("**Алгоритм:**")
-            for i, step in enumerate(steps, 1):
-                st.markdown(f"{i}. {step}")
-        checklist = diary.get("checklist", [])
-        if checklist:
-            for item in checklist:
-                q = item.get("question", "")
-                yes_lbl = item.get("yes_label", "Да")
-                no_lbl = item.get("no_label", "Нет")
-                st.markdown(f"**{q}**  \n✓ {yes_lbl}: {item.get('yes','')}  \n✗ {no_lbl}: {item.get('no','')}")
-        example = diary.get("example")
-        if example:
-            st.markdown(f"*{example['question']}*")
-            st.markdown(f"Слабо: {example['weak']}")
-            st.markdown(f"Сильно: {example['strong']}")
-        footer = diary.get("footer")
-        if footer:
-            st.markdown(f"*{footer}*")
+    for para in diary.get("content", []):
+        html += f'<p style="margin-bottom:6px;">{para}</p>'
     
-    st.markdown('</div>', unsafe_allow_html=True)
+    steps = diary.get("steps", [])
+    if steps:
+        html += '<p style="font-weight:600;margin:8px 0 4px;">Алгоритм:</p><ol style="margin:0;padding-left:20px;">'
+        for step in steps:
+            html += f'<li style="margin-bottom:4px;">{step}</li>'
+        html += '</ol>'
+    
+    checklist = diary.get("checklist", [])
+    if checklist:
+        for item in checklist:
+            q = item.get("question", "")
+            yes_lbl = item.get("yes_label", "Да")
+            no_lbl = item.get("no_label", "Нет")
+            html += (
+                f'<p style="font-weight:600;margin:8px 0 2px;">{q}</p>'
+                f'<p style="margin:0;">✓ {yes_lbl}: {item.get("yes","")}</p>'
+                f'<p style="margin:0;">✗ {no_lbl}: {item.get("no","")}</p>'
+            )
+    
+    example = diary.get("example")
+    if example:
+        html += (
+            f'<p style="font-style:italic;margin-top:8px;">{example["question"]}</p>'
+            f'<p style="margin:2px 0;">Слабо: {example["weak"]}</p>'
+            f'<p style="margin:2px 0;">Сильно: {example["strong"]}</p>'
+        )
+    
+    footer = diary.get("footer")
+    if footer:
+        html += f'<p style="font-style:italic;margin-top:8px;">{footer}</p>'
+    
+    html += '</div>'
+    st.markdown(html, unsafe_allow_html=True)
 
 # ── CSS ───────────────────────────────────────────────────────────────
 # ВАЖНО: весь CSS — одна строка-литерал (не f-string),
