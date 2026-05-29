@@ -402,29 +402,6 @@ summary::marker { display:none!important; }
 }
 """
 
-CONTAINER_CSS = """
-.st-key-materials_box > div > div,
-.st-key-materials_log_box > div > div {
-    overflow-y: auto !important;
-    overflow-anchor: none !important;
-    resize: vertical !important;
-    min-height: 100px !important;
-    max-height: 260px;
-    border: 1px solid #DDD0C2 !important;
-    border-radius: 10px !important;
-    padding: 10px 12px !important;
-    background: rgba(250,246,238,0.6) !important;
-}
-.st-key-materials_log_box > div > div {
-    max-height: 540px !important;
-}
-.st-key-materials_box > div > div::-webkit-scrollbar,
-.st-key-materials_log_box > div > div::-webkit-scrollbar { width: 5px; }
-.st-key-materials_box > div > div::-webkit-scrollbar-thumb,
-.st-key-materials_log_box > div > div::-webkit-scrollbar-thumb { 
-    background: rgba(180,155,125,.4); border-radius: 10px; 
-}
-"""
 
 # f-string только для переменных Python (цвета текстур), всё остальное — литерал
 st.markdown(f"""<style>
@@ -621,14 +598,23 @@ if active_view == "chat":
 
         # Материалы дела — теперь НИЖЕ
         st.markdown('<div class="panel-section-title">Текущие материалы дела</div>', unsafe_allow_html=True)
-        with st.container(key="materials_box"):
-            if current_diaries:
+        if current_diaries:
+            with st.container(height=260):
                 for diary in current_diaries:
                     render_detective_diary(diary)
-            elif materials_to_show:
+        elif materials_to_show:
+            with st.container(height=260):
                 render_materials(materials_to_show)
-            else:
-                st.markdown('<div style="font-size:.82rem;color:#9a8878;font-style:italic;">Улики появятся здесь по мере расследования…</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="font-size:.82rem;color:#9a8878;font-style:italic;">Улики появятся здесь по мере расследования…</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <script>
+        setTimeout(function(){
+            var containers = window.parent.document.querySelectorAll('[data-testid="stVerticalBlockBorderWrapper"]');
+            containers.forEach(function(c){ c.scrollTop = 0; });
+        }, 300);
+        </script>
+        """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ── MATERIALS ─────────────────────────────────────────────────────────
