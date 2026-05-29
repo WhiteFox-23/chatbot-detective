@@ -682,14 +682,6 @@ elif active_view == "analysis":
             f'</div>',
             unsafe_allow_html=True)
         st.markdown('<div class="panel-divider"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="panel-section-title">Сводка по баллам</div>', unsafe_allow_html=True)
-        st.write(
-            f"Безопасность: {summary['security']} · "
-            f"Алгоритмы: {summary['rules']} · "
-            f"Код: {summary['code']} · "
-            f"Гипотеза: {summary['hypothesis']}"
-        )
-        st.markdown('<div class="panel-divider"></div>', unsafe_allow_html=True)
         st.markdown('<div class="panel-section-title">Использованные подсказки</div>', unsafe_allow_html=True)
         if summary["hint_nodes_used"]:
             for h in summary["hint_nodes_used"]: st.markdown(f"- {h}")

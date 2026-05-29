@@ -1,0 +1,2 @@
+timestamp,session_id,case_title,difficulty,visited_nodes_count,hint_count,final_hypothesis,security_score,rules_score,code_score,hypothesis_score,critical_thinking_level,critical_thinking_score,subject_knowledge_level,subject_knowledge_score
+2026-05-29T15:52:37,0dd22ae4-e37f-4df5-8f28-2d0e31566a94,Дело о странных сообщениях,Базовый уровень,24,4,никто,1,0,0,1,не проявлен,0,не проявлен,0
