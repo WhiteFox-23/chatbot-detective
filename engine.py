@@ -198,23 +198,33 @@ def classify_t1_actions(answer: str):
     if is_empty_answer(answer):
         return "bad"
 
-    urgent = count_distinct_groups(text, [
+    # Маппинг номеров пунктов на категории
+    urgent_nums   = {"1", "2", "6"}   # срочно
+    helpful_nums  = {"3", "5"}        # полезно
+    harmful_nums  = {"4", "7", "8"}   # лишнее
+
+    # Ищем упомянутые номера в тексте
+    mentioned = set(re.findall(r'\b([1-8])\b', text))
+
+    urgent  = count_distinct_groups(text, [
         ["сменить парол", "смена парол"],
         ["2fa", "двухфактор"],
         ["срочно", "прямо сейчас"],
         ["выйти из всех", "других устройств"],
-    ])
+    ]) + len(mentioned & urgent_nums)
+
     helpful = count_distinct_groups(text, [
         ["проверить", "проверка", "авторизац", "привязан"],
         ["сообщить", "предупред", "написать", "чат", "групп"],
         ["не открыв", "не скачив", "не запуск"],
         ["не переход", "не переходить"],
-    ])
+    ]) + len(mentioned & helpful_nums)
+
     harmful = count_distinct_groups(text, [
         ["удалить бота", "сразу удалить"],
         ["обвинить", "публично обвинить"],
         ["выключить уведомления", "ничего не читать"],
-    ])
+    ]) + len(mentioned & harmful_nums)
 
     if urgent >= 1 and helpful >= 2:
         return "good"

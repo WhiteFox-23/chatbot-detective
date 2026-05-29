@@ -232,7 +232,8 @@ def render_materials(materials):
                         unsafe_allow_html=True)
         elif key == "vanya_action_ideas":
             st.markdown("#### Идеи Вани")
-            for item in value: st.markdown(f"- {item}")
+            for item in value: 
+                st.markdown(item)
         elif key == "rule_description":
             st.markdown("#### Правило работы бота")
             items = value.get("items", value) if isinstance(value, dict) else value
