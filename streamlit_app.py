@@ -187,7 +187,6 @@ def render_df_table(data, title):
 
 def render_html_wrap_table(data, title):
     if not data: return
-    st.write(f"DEBUG type: {type(value)}, value: {value}")
     st.markdown(f"#### {title}")
     
     # Если список словарей — конвертируем
@@ -248,8 +247,12 @@ def render_materials(materials):
             st.markdown("#### Правило работы бота")
             items = value.get("items", value) if isinstance(value, dict) else value
             for item in items: st.markdown(f"- {item}")
-        elif key in ["journal_05_05","journal_0505"]: render_html_wrap_table(value,"Журнал за 05.05")
-        elif key in ["journal_06_05","journal_0605"]: render_html_wrap_table(value,"Журнал за 06.05")
+        elif key in ["journal_05_05","journal_0505"]: 
+            st.write(f"DEBUG 0505 type: {type(value)}")
+            render_html_wrap_table(value,"Журнал за 05.05")
+        elif key in ["journal_06_05","journal_0605"]: 
+            st.write(f"DEBUG 0605 type: {type(value)}")
+            render_html_wrap_table(value,"Журнал за 06.05")
         elif key == "repo_access":
             st.markdown("#### Доступ к репозиторию")
             for item in value: st.markdown(f"- {item}")
