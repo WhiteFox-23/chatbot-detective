@@ -218,7 +218,12 @@ def render_materials(materials):
                 st.markdown(f"#### {title}")
                 for item in value.get("items", []): st.markdown(f"- {item}")
             elif t == "table":
-                (render_html_wrap_table if key == "suspects_table" else render_df_table)(value, title)
+                if key == "suspects_table":
+                    render_html_wrap_table(value, title)
+                elif "journal" in key.lower():
+                    render_html_wrap_table(value, title)  # ← добавь
+                else:
+                    render_df_table(value, title)
             elif t == "text":
                 st.markdown(f"#### {title}"); st.write(value.get("content",""))
             elif t == "code":
