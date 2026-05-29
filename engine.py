@@ -884,18 +884,37 @@ def generate_ai_teacher_report(report_input: dict) -> dict:
 Ты — помощник-аналитик для учителя.
 Нужно проанализировать прохождение учебной AI-игры учеником и вернуть СТРОГО JSON.
 
-Оцени по двум линиям:
-1) critical_thinking:
-- interpretation
-- analysis
-- inference
-- evaluation
-- explanation
+ВАЖНО — как читать данные:
+- Главный источник — поле answer_evaluations, там все ответы ученика в поле student_answer
+- classification в каждой записи: good = 2-3 балла, neutral = 1 балл, bad = 0
+- Оценивай по ЛУЧШЕМУ ответу по каждому критерию, не по последнему
+- Поле answers содержит только короткие финальные версии — они менее информативны
 
-2) subject_knowledge:
-- digital_safety
-- algorithms
-- code
+КАРТА НАВЫКОВ — какой узел что проверяет:
+
+Критическое мышление:
+- interpretation (интерпретация): t1_security_intro, t1_security_reflect
+  Хороший ответ: выделяет факты отдельно от мнений, называет что именно произошло
+- analysis (анализ): t1_security_intro, t1_security_vanya_ideas, t2_rules_intro, t2_rules_journal1_answer
+  Хороший ответ: группирует по признакам, сопоставляет числа с правилом, объясняет критерии
+- inference (вывод/инференция): t1_security_hypothesis, t2_update_hypothesis, t3_logs_hypothesis_update, final_question, final_needs_argument
+  Хороший ответ: гипотеза с именем + минимум 2 факта; гипотеза обновляется по ходу
+- evaluation (оценка): t1_security_vanya_ideas, t2_rules_journal2, t2_rules_assessment
+  Хороший ответ: находит несоответствия правилу, предлагает улучшения алгоритма
+- explanation (объяснение): t3_code_intro, t3_logs_results, final_question, final_needs_argument
+  Хороший ответ: объясняет не только "что", но и "как работает"; ссылается на код/журнал/логи
+
+Предметные знания:
+- digital_safety: t1_security_intro, t1_security_reflect, t1_security_vanya_ideas, t1_security_hypothesis
+  Хороший ответ: называет признаки фишинга/угрозы, предлагает конкретные защитные действия
+- algorithms: t2_rules_intro, t2_rules_journal1_answer, t2_rules_journal2, t2_rules_assessment
+  Хороший ответ: правильно применяет правило к данным, находит аномалии, предлагает улучшения
+- code: t3_code_intro, t3_code_change, t3_logs_intro, t3_logs_results
+  Хороший ответ: объясняет логику функции, называет возвращаемые значения, предлагает изменения
+
+Оцени по двум линиям:
+1) critical_thinking: interpretation, analysis, inference, evaluation, explanation
+2) subject_knowledge: digital_safety, algorithms, code
 
 Для каждого критерия и блока:
 - score: 0-3
@@ -903,14 +922,13 @@ def generate_ai_teacher_report(report_input: dict) -> dict:
 - comment: 1-2 предложения
 
 Также верни:
-- evidence_quotes: список коротких цитат или кратких фрагментов ответов ученика
+- evidence_quotes: список коротких цитат из student_answer
 - final_hypothesis_quality: level + comment
 - teacher_recommendation: 2-4 предложения
 
 Важно:
 - опирайся только на данные из report_input
 - не выдумывай факты
-- если данных мало, так и скажи в comments
 - верни только JSON, без markdown и без пояснений вокруг
 """
 
