@@ -187,6 +187,7 @@ def render_df_table(data, title):
 
 def render_html_wrap_table(data, title):
     if not data: return
+    st.write(f"DEBUG type: {type(value)}, value: {value}")
     st.markdown(f"#### {title}")
     
     # Если список словарей — конвертируем
@@ -203,7 +204,6 @@ def render_html_wrap_table(data, title):
 def render_materials(materials):
     if not materials: return
     for key, value in materials.items():
-        st.write(f"DEBUG key: {key}")
         if isinstance(value, dict) and "type" in value:
             t     = value.get("type")
             title = value.get("title", key)
