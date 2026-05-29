@@ -210,8 +210,25 @@ def render_materials(materials):
         elif key == "messages_and_files":
             st.markdown("#### Сообщения и файлы")
             for item in value:
-                with st.expander(item.get("title","Материал"), expanded=False):
-                    st.write(item["content"])
+                title = item.get("title", "Материал")
+                content = item["content"]
+                # Используем session_state для toggle
+                toggle_key = f"msg_open_{item.get('id', title)}"
+                if toggle_key not in st.session_state:
+                    st.session_state[toggle_key] = False
+                
+                if st.button(f"{'▼' if st.session_state[toggle_key] else '▶'}  {title}", 
+                            key=f"btn_{toggle_key}",
+                            use_container_width=True):
+                    st.session_state[toggle_key] = not st.session_state[toggle_key]
+                
+                if st.session_state[toggle_key]:
+                    st.markdown(
+                        f'<div style="background:#FAF6EE;border:1px solid #DDD0C2;'
+                        f'border-radius:0 0 10px 10px;padding:10px 14px;'
+                        f'font-size:.85rem;margin-top:-8px;margin-bottom:5px;">'
+                        f'{content}</div>',
+                        unsafe_allow_html=True)
         elif key == "vanya_action_ideas":
             st.markdown("#### Идеи Вани")
             for item in value: st.markdown(f"- {item}")
