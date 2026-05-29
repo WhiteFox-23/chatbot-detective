@@ -559,7 +559,7 @@ def classify_answer(answer: str, node_id: str):
     if node_id == "t3_logs_hypothesis_update":
         return classify_t3_final_hypothesis(answer)
 
-    if node_id == "final_question":
+    if node_id in ["final_question", "final_needs_argument"]:
         return classify_final(answer)
 
     return "default"

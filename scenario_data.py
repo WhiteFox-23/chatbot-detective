@@ -748,10 +748,11 @@ users = [
         "question": "обнови свою гипотезу: назови, кого ты сейчас считаешь главным подозреваемым и на какие факты опираешься (желательно не меньше двух).",
         "answer_key": "t3_final_hypothesis",
         "branches": {
-            "good": "final_question",
-            "neutral": "final_question",
-            "bad": "final_question",
-            "default": "final_question",
+            "good_kirill": "end_kirill_epilogue",
+            "good": "end_generic",
+            "neutral": "end_generic",
+            "bad": "final_needs_argument",      # ← было end_generic
+            "default": "final_needs_argument",
         },
         "score_tags": ["hypothesis"],
     },
@@ -785,6 +786,28 @@ users = [
         },
         "score_tags": ["hypothesis"],
     },
+
+    "final_needs_argument": {
+    "id": "final_needs_argument",
+    "node_type": "task",
+    "is_hint": False,
+    "speaker": "Ваня",
+    "messages": [
+        "хм, окей, но я пока не до конца понимаю почему именно этот человек",
+        "можешь объяснить конкретнее? на что именно ты опираешься — код, журнал, доступы?",
+        "мне важно понять логику, а не просто имя",
+    ],
+    "question": "Попробуй ещё раз — назови подозреваемого и объясни, какие конкретные факты (из кода, журнала или доступов) на него указывают.",
+    "answer_key": "final_suspect_retry",
+    "branches": {
+        "good_kirill": "end_kirill_epilogue",
+        "good": "end_generic",
+        "neutral": "end_generic",
+        "bad": "end_generic",
+        "default": "end_generic",
+    },
+    "score_tags": ["hypothesis"],
+},  
 
     "end_kirill_epilogue": {
         "id": "end_kirill_epilogue",
