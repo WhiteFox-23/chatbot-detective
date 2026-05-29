@@ -999,7 +999,11 @@ def generate_ai_teacher_report(report_input: dict) -> dict:
     content = data["choices"][0]["message"]["content"].strip()
 
     try:
-        return json.loads(content)
+        clean = content.strip()
+        if "```" in clean:
+            clean = re.sub(r"```(?:json)?\s*", "", clean).strip()
+            clean = clean.rstrip("`").strip()
+        return json.loads(clean)
     except json.JSONDecodeError:
         return {
             "critical_thinking": {
