@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 import glob
 import streamlit as st
+import re
 
 from engine import (
     init_state, start_scenario, submit_answer, get_question,
@@ -246,6 +247,13 @@ def render_materials(materials):
         elif key == "suspects_table": render_html_wrap_table(value,"Таблица подозреваемых")
         else: st.markdown(f"#### {key}"); st.write(value)
 
+def md_to_html(text: str) -> str:
+    # **жирный** → <strong>жирный</strong>
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+    # *курсив* → <em>курсив</em>
+    text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
+    return text
+
 def render_detective_diary(diary):
     title = diary.get("title", "Дневник детектива")
     subtitle = diary.get("subtitle", "")
@@ -258,13 +266,13 @@ def render_detective_diary(diary):
     )
     
     for para in diary.get("content", []):
-        html += f'<p style="margin-bottom:6px;">{para}</p>'
+        html += f'<p style="margin-bottom:6px;">{md_to_html(para)}</p>'
     
     steps = diary.get("steps", [])
     if steps:
         html += '<p style="font-weight:600;margin:8px 0 4px;">Алгоритм:</p><ol style="margin:0;padding-left:20px;">'
         for step in steps:
-            html += f'<li style="margin-bottom:4px;">{step}</li>'
+            html += f'<li style="margin-bottom:4px;">{md_to_html(step)}</li>'
         html += '</ol>'
     
     checklist = diary.get("checklist", [])
@@ -274,10 +282,10 @@ def render_detective_diary(diary):
             yes_lbl = item.get("yes_label", "Да")
             no_lbl = item.get("no_label", "Нет")
             html += (
-                f'<p style="font-weight:600;margin:8px 0 2px;">{q}</p>'
-                f'<p style="margin:0;">✓ {yes_lbl}: {item.get("yes","")}</p>'
-                f'<p style="margin:0;">✗ {no_lbl}: {item.get("no","")}</p>'
-            )
+                f'<p style="font-weight:600;margin:8px 0 2px;">{md_to_html(q)}</p>'
+                f'<p style="margin:0;">✓ {yes_lbl}: {md_to_html(item.get("yes",""))}</p>'
+                f'<p style="margin:0;">✗ {no_lbl}: {md_to_html(item.get("no",""))}</p>'
+)
     
     example = diary.get("example")
     if example:
