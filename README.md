@@ -1,4 +1,4 @@
-# 🎈 Blank app template
+# 🎈 Детективная ИИ-игра по информатике для учащихся 10-11 классов
 
 A simple Streamlit app template for you to modify!
 
